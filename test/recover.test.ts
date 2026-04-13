@@ -1,8 +1,106 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { createCipheriv, randomBytes } from "node:crypto";
 import { join } from "node:path";
+import { encrypt as eciesEncrypt, PrivateKey } from "eciesjs";
 import { reconstruct } from "../src/reconstruct.js";
-import type { AlephMessage } from "../src/types.js";
+import type { AlephMessage, EncryptedEnvelope } from "../src/types.js";
+
+// ─── Encryption helpers (mirrors apps/backend/src/services/encryption.ts) ──────
+
+const TEST_USER_PRIV = Buffer.from("11".repeat(32), "hex");
+const TEST_BACKEND_PRIV = Buffer.from("22".repeat(32), "hex");
+
+function deriveUncompressedPub(priv: Buffer): Buffer {
+  return Buffer.from(new PrivateKey(priv).publicKey.uncompressed);
+}
+
+const TEST_USER_PUB = deriveUncompressedPub(TEST_USER_PRIV);
+const TEST_BACKEND_PUB = deriveUncompressedPub(TEST_BACKEND_PRIV);
+
+/**
+ * Minimal dual-envelope encryptBlob for use in inline test fixtures.
+ * Matches the wire format produced by the backend's `encryptBlob`.
+ */
+function encryptForTest(
+  cleartext: Record<string, unknown>,
+  userPub: Buffer = TEST_USER_PUB,
+  backendPub: Buffer = TEST_BACKEND_PUB,
+): EncryptedEnvelope {
+  const plaintext = Buffer.from(JSON.stringify(cleartext), "utf8");
+  const dek = randomBytes(32);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", dek, iv);
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return {
+    v: 1,
+    alg: "aes-256-gcm",
+    ct: ciphertext.toString("base64"),
+    iv: iv.toString("base64"),
+    tag: tag.toString("base64"),
+    deks: {
+      user: Buffer.from(eciesEncrypt(userPub, dek)).toString("base64"),
+      backend: Buffer.from(eciesEncrypt(backendPub, dek)).toString("base64"),
+    },
+  };
+}
+
+function makeAggregate(
+  projectId: string,
+  publicFields: Record<string, unknown>,
+  encryptedBlob: Record<string, unknown>,
+  time = 1712620800,
+): AlephMessage {
+  return {
+    type: "AGGREGATE",
+    channel: "TEST",
+    sender: "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    signature: "0x",
+    item_hash: `inline_agg_${projectId}`,
+    content: {
+      address: "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      key: "projects",
+      content: {
+        [projectId]: {
+          id: projectId,
+          schemaVersion: 1,
+          public: publicFields,
+          encrypted: encryptForTest(encryptedBlob),
+        },
+      },
+      time,
+    },
+  };
+}
+
+function makeCreationPost(
+  deploymentId: string,
+  projectId: string,
+  publicFields: Record<string, unknown>,
+  encryptedBlob: Record<string, unknown>,
+  time = 1712622600,
+): AlephMessage {
+  return {
+    type: "POST",
+    channel: "TEST",
+    sender: "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+    signature: "0x",
+    item_hash: `inline_post_${deploymentId}`,
+    content: {
+      address: "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      type: "aleph-cloud-deployment",
+      content: {
+        deploymentId,
+        projectId,
+        schemaVersion: 1,
+        public: publicFields,
+        encrypted: encryptForTest(encryptedBlob),
+      },
+      time,
+    },
+  };
+}
 
 // Load fixtures straight from the backend's hand-crafted message set.
 // This is intentional: sharing fixtures guarantees that when the cross-agreement
@@ -158,5 +256,121 @@ describe("reconstruct — corruption resilience", () => {
     expect(result.projects).toEqual([]);
     expect(result.warnings.length).toBeGreaterThanOrEqual(1);
     expect(result.stats.decryptionFailures).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("reconstruct — v1/v2 schema compatibility", () => {
+  it("v1 fixture: runId/runAttempt absent → both read as null, no crash", () => {
+    // v1 deployment public has no runId/runAttempt fields; v1 project encrypted
+    // blob has no pendingWorkflowPr* fields. Both should gracefully produce null.
+    const agg = makeAggregate(
+      "proj_v1",
+      {
+        framework: "nextjs-static",
+        deployTarget: "ipfs",
+        createdAt: "2026-04-09T00:00:00.000Z",
+        updatedAt: "2026-04-09T00:00:00.000Z",
+        deleted: false,
+      },
+      {
+        name: "v1-app",
+        source: "github",
+        repo: "acme/v1-app",
+        branch: "main",
+        installationId: 999,
+        buildCommand: "npm run build",
+        outputDir: "dist",
+        // no pendingWorkflowPrUrl, no pendingWorkflowPrNumber
+      },
+    );
+    const post = makeCreationPost(
+      "deploy_v1",
+      "proj_v1",
+      {
+        status: "live",
+        cid: "bafyv1",
+        url: "https://bafyv1.ipfs.aleph.sh",
+        tokenHash: "aabbcc",
+        createdAt: "2026-04-09T00:30:00.000Z",
+        finishedAt: "2026-04-09T00:33:00.000Z",
+        // no runId, no runAttempt
+      },
+      {
+        commit: "abc1234",
+        commitMessage: "v1 deploy",
+        branch: "main",
+        actionsRunUrl: null,
+        error: null,
+      },
+    );
+
+    const result = reconstruct([agg], [post], TEST_USER_PRIV);
+    expect(result.warnings).toEqual([]);
+    expect(result.projects.length).toBe(1);
+    const p = result.projects[0];
+    expect(p?.pendingWorkflowPrUrl).toBeNull();
+    expect(p?.pendingWorkflowPrNumber).toBeNull();
+    expect(p?.deployments.length).toBe(1);
+    const d = p?.deployments[0];
+    expect(d?.runId).toBeNull();
+    expect(d?.runAttempt).toBeNull();
+  });
+
+  it("v2 fixture: runId/runAttempt and pending PR fields round-trip correctly", () => {
+    // v2 deployment public has runId + runAttempt; project encrypted blob has
+    // pendingWorkflowPrUrl + pendingWorkflowPrNumber.
+    const agg = makeAggregate(
+      "proj_v2",
+      {
+        framework: "nextjs-static",
+        deployTarget: "ipfs",
+        createdAt: "2026-04-13T10:00:00.000Z",
+        updatedAt: "2026-04-13T10:00:00.000Z",
+        deleted: false,
+      },
+      {
+        name: "v2-app",
+        source: "github",
+        repo: "acme/v2-app",
+        branch: "main",
+        installationId: 777,
+        buildCommand: "npm run build",
+        outputDir: "dist",
+        pendingWorkflowPrUrl: "https://github.com/u/r/pull/3",
+        pendingWorkflowPrNumber: 3,
+      },
+    );
+    const post = makeCreationPost(
+      "deploy_v2",
+      "proj_v2",
+      {
+        status: "live",
+        cid: "bafyv2",
+        url: "https://bafyv2.ipfs.aleph.sh",
+        createdAt: "2026-04-13T10:05:00.000Z",
+        finishedAt: "2026-04-13T10:08:00.000Z",
+        runId: 42,
+        runAttempt: 1,
+      },
+      {
+        commit: "def5678",
+        commitMessage: "v2 deploy via OIDC",
+        branch: "main",
+        actionsRunUrl:
+          "https://github.com/acme/v2-app/actions/runs/42",
+        error: null,
+      },
+    );
+
+    const result = reconstruct([agg], [post], TEST_USER_PRIV);
+    expect(result.warnings).toEqual([]);
+    expect(result.projects.length).toBe(1);
+    const p = result.projects[0];
+    expect(p?.pendingWorkflowPrUrl).toBe("https://github.com/u/r/pull/3");
+    expect(p?.pendingWorkflowPrNumber).toBe(3);
+    expect(p?.deployments.length).toBe(1);
+    const d = p?.deployments[0];
+    expect(d?.runId).toBe(42);
+    expect(d?.runAttempt).toBe(1);
   });
 });

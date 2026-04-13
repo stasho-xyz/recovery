@@ -35,6 +35,8 @@ interface DeploymentPostInner {
     url: string | null;
     createdAt: string;
     finishedAt: string | null;
+    runId?: number | null;
+    runAttempt?: number | null;
   };
   encrypted: EncryptedEnvelope;
 }
@@ -86,6 +88,10 @@ export function reconstruct(
           deployTarget: entry.public.deployTarget,
           createdAt: entry.public.createdAt,
           updatedAt: entry.public.updatedAt,
+          pendingWorkflowPrUrl:
+            (decrypted["pendingWorkflowPrUrl"] as string | null) ?? null,
+          pendingWorkflowPrNumber:
+            (decrypted["pendingWorkflowPrNumber"] as number | null) ?? null,
           deployments: [],
         });
       } catch (err) {
@@ -133,6 +139,12 @@ export function reconstruct(
       error: (decrypted["error"] as string | null) ?? null,
       createdAt: inner.public.createdAt,
       finishedAt: inner.public.finishedAt,
+      runId:
+        typeof inner.public.runId === "number" ? inner.public.runId : null,
+      runAttempt:
+        typeof inner.public.runAttempt === "number"
+          ? inner.public.runAttempt
+          : null,
     };
 
     const project = projectsById.get(inner.projectId);

@@ -36,6 +36,8 @@ export interface RecoveredProject {
   deployTarget: "ipfs" | "instance";
   createdAt: string;
   updatedAt: string;
+  pendingWorkflowPrUrl: string | null;
+  pendingWorkflowPrNumber: number | null;
   deployments: RecoveredDeployment[];
 }
 
@@ -51,6 +53,8 @@ export interface RecoveredDeployment {
   error: string | null;
   createdAt: string;
   finishedAt: string | null;
+  runId: number | null;
+  runAttempt: number | null;
 }
 
 export interface RecoveryWarning {
@@ -71,7 +75,7 @@ export interface RecoveryStats {
 
 export interface RecoveryOutput {
   $schema: string;
-  schemaVersion: 1;
+  schemaVersion: 2;
   wallet: string;
   recoveredAt: string;
   alephApiUrl: string;

@@ -169,8 +169,8 @@ async function main(): Promise<void> {
   const result = reconstruct(aggregates, posts, userPrivKey);
 
   const output: RecoveryOutput = {
-    $schema: "https://app.stasho.xyz/schemas/recovery-v1.json",
-    schemaVersion: 1,
+    $schema: "https://app.stasho.xyz/schemas/recovery-v2.json",
+    schemaVersion: 2,
     wallet: args.address,
     recoveredAt: new Date().toISOString(),
     alephApiUrl: args.alephApi,
