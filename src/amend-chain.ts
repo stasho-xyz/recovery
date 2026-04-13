@@ -36,9 +36,16 @@ export function groupAmendChains(
     if (!deploymentId) continue;
 
     let current: AlephMessage = p;
+    // Only follow amends whose `content.address` matches the current node's —
+    // anyone can publish a POST with `ref` pointing at our creation hash, but
+    // an amend signed for a different address is not authoritative. Without
+    // this check a foreign wallet could hijack a deployment's terminal state.
     // Bound the walk by total post count to guard against cycles in malformed data.
     for (let i = 0; i < posts.length + 1; i++) {
-      const children = childrenOf.get(current.item_hash) ?? [];
+      const ownerAddr = current.content.address.toLowerCase();
+      const children = (childrenOf.get(current.item_hash) ?? []).filter(
+        (c) => c.content.address.toLowerCase() === ownerAddr,
+      );
       if (children.length === 0) break;
       children.sort((a, b) => b.content.time - a.content.time);
       const next = children[0];
