@@ -44,7 +44,20 @@ export interface RecoveredProject {
 export interface RecoveredDeployment {
   id: string;
   status: string;
+  /**
+   * STORE message item_hash. v4 deployments reference their artifact via
+   * this hash; v3 legacy records have null here. Resolves to `cid` via
+   * `fetchStoreMessage`.
+   */
+  storeRef: string | null;
   cid: string | null;
+  /**
+   * True when the STORE referenced by `storeRef` is no longer on Aleph
+   * (FORGOTten — typically because the project was deleted). The
+   * deployment metadata is preserved here for audit, but the artifact
+   * bytes are unrecoverable through Aleph's index.
+   */
+  storeForgotten: boolean;
   url: string | null;
   commit: string | null;
   commitMessage: string | null;
@@ -75,7 +88,7 @@ export interface RecoveryStats {
 
 export interface RecoveryOutput {
   $schema: string;
-  schemaVersion: 2;
+  schemaVersion: 3;
   wallet: string;
   recoveredAt: string;
   alephApiUrl: string;

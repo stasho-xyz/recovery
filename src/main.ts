@@ -166,11 +166,16 @@ async function main(): Promise<void> {
     `Fetched ${aggregates.length} AGGREGATE + ${posts.length} POST messages`,
   );
 
-  const result = reconstruct(aggregates, posts, userPrivKey);
+  const result = await reconstruct(
+    aggregates,
+    posts,
+    userPrivKey,
+    args.alephApi,
+  );
 
   const output: RecoveryOutput = {
     $schema: "https://app.stasho.xyz/schemas/recovery-v2.json",
-    schemaVersion: 2,
+    schemaVersion: 3,
     wallet: args.address,
     recoveredAt: new Date().toISOString(),
     alephApiUrl: args.alephApi,

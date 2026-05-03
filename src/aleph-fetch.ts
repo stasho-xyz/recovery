@@ -41,3 +41,30 @@ export async function fetchAllMessages(
 
   return all;
 }
+
+/**
+ * Fetch a single STORE message by its item_hash. Returns the message's
+ * inner content (only the bits the reconstructor needs) or null when the
+ * STORE is FORGOTten (404) or the message exists but isn't a STORE.
+ * Throws on transient transport / parse failures so callers can
+ * differentiate "deleted" from "unreachable."
+ */
+export async function fetchStoreMessage(
+  apiUrl: string,
+  itemHash: string,
+): Promise<{ content: { item_hash: string } } | null> {
+  const url = `${apiUrl}/api/v0/messages/${itemHash}`;
+  const res = await fetch(url);
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(
+      `fetchStoreMessage ${itemHash}: HTTP ${res.status} ${res.statusText}`,
+    );
+  }
+  const body = (await res.json()) as {
+    type?: string;
+    content?: { item_hash?: string };
+  };
+  if (body.type !== "STORE" || !body.content?.item_hash) return null;
+  return { content: { item_hash: body.content.item_hash } };
+}

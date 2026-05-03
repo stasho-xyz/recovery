@@ -137,18 +137,18 @@ function loadFixture(name: string): {
 }
 
 describe("reconstruct — empty + single project", () => {
-  it("01-empty: produces empty output with no warnings", () => {
+  it("01-empty: produces empty output with no warnings", async () => {
     const f = loadFixture("01-empty");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects).toEqual([]);
     expect(result.stats.projectsRecovered).toBe(0);
     expect(result.stats.deploymentsRecovered).toBe(0);
     expect(result.warnings).toEqual([]);
   });
 
-  it("02-single-project: recovers the project with decrypted fields", () => {
+  it("02-single-project: recovers the project with decrypted fields", async () => {
     const f = loadFixture("02-single-project");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects.length).toBe(1);
     const p = result.projects[0];
     expect(p?.id).toBe("proj_001");
@@ -166,27 +166,27 @@ describe("reconstruct — empty + single project", () => {
 });
 
 describe("reconstruct — tombstones", () => {
-  it("04-project-deleted: tombstone evicts the project from the output", () => {
+  it("04-project-deleted: tombstone evicts the project from the output", async () => {
     const f = loadFixture("04-project-deleted");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects).toEqual([]);
     expect(result.stats.projectsRecovered).toBe(0);
   });
 });
 
 describe("reconstruct — deployments", () => {
-  it("05-deployment-queued: cache-only intermediate state is visible if posted", () => {
+  it("05-deployment-queued: cache-only intermediate state is visible if posted", async () => {
     const f = loadFixture("05-deployment-queued");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects.length).toBe(1);
     // Queued deployments are written as POST creations, so they appear
     // whether or not a terminal amend has been written yet.
     expect(result.projects[0]?.deployments.length).toBeGreaterThanOrEqual(0);
   });
 
-  it("06-deployment-live: recovers project with one live deployment", () => {
+  it("06-deployment-live: recovers project with one live deployment", async () => {
     const f = loadFixture("06-deployment-live");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects.length).toBe(1);
     const p = result.projects[0];
     expect(p?.deployments.length).toBe(1);
@@ -200,9 +200,9 @@ describe("reconstruct — deployments", () => {
     expect(d?.finishedAt).toBe("2026-04-09T00:33:00.000Z");
   });
 
-  it("07-deployment-failed: recovers project with one failed deployment", () => {
+  it("07-deployment-failed: recovers project with one failed deployment", async () => {
     const f = loadFixture("07-deployment-failed");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects.length).toBe(1);
     const d = result.projects[0]?.deployments[0];
     expect(d?.status).toBe("failed");
@@ -211,9 +211,9 @@ describe("reconstruct — deployments", () => {
 });
 
 describe("reconstruct — amend chains", () => {
-  it("08-amend-chain-deep: collapses multi-step chain to the terminal state", () => {
+  it("08-amend-chain-deep: collapses multi-step chain to the terminal state", async () => {
     const f = loadFixture("08-amend-chain-deep");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects.length).toBe(1);
     const d = result.projects[0]?.deployments[0];
     expect(d?.id).toBe("deploy_003");
@@ -227,9 +227,9 @@ describe("reconstruct — amend chains", () => {
 });
 
 describe("reconstruct — multi-project", () => {
-  it("09-multi-project: recovers multiple projects with their deployments", () => {
+  it("09-multi-project: recovers multiple projects with their deployments", async () => {
     const f = loadFixture("09-multi-project");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects.length).toBeGreaterThan(1);
     // Each deployment attaches to its own project — no cross-contamination.
     for (const p of result.projects) {
@@ -241,18 +241,18 @@ describe("reconstruct — multi-project", () => {
 });
 
 describe("reconstruct — corruption resilience", () => {
-  it("10-corrupted-envelope: records a warning and skips, no crash", () => {
+  it("10-corrupted-envelope: records a warning and skips, no crash", async () => {
     const f = loadFixture("10-corrupted-envelope");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects).toEqual([]);
     expect(result.warnings.length).toBeGreaterThanOrEqual(1);
     expect(result.stats.decryptionFailures).toBeGreaterThanOrEqual(1);
     expect(result.warnings[0]?.code).toBe("DECRYPT_FAILED");
   });
 
-  it("11-tampered-ciphertext: auth tag mismatch surfaces as a warning", () => {
+  it("11-tampered-ciphertext: auth tag mismatch surfaces as a warning", async () => {
     const f = loadFixture("11-tampered-ciphertext");
-    const result = reconstruct(f.aggregates, f.posts, f.userPrivKey);
+    const result = await reconstruct(f.aggregates, f.posts, f.userPrivKey, "https://test.aleph.local");
     expect(result.projects).toEqual([]);
     expect(result.warnings.length).toBeGreaterThanOrEqual(1);
     expect(result.stats.decryptionFailures).toBeGreaterThanOrEqual(1);
@@ -260,7 +260,7 @@ describe("reconstruct — corruption resilience", () => {
 });
 
 describe("reconstruct — v1/v2 schema compatibility", () => {
-  it("v1 fixture: runId/runAttempt absent → both read as null, no crash", () => {
+  it("v1 fixture: runId/runAttempt absent → both read as null, no crash", async () => {
     // v1 deployment public has no runId/runAttempt fields; v1 project encrypted
     // blob has no pendingWorkflowPr* fields. Both should gracefully produce null.
     const agg = makeAggregate(
@@ -304,8 +304,10 @@ describe("reconstruct — v1/v2 schema compatibility", () => {
       },
     );
 
-    const result = reconstruct([agg], [post], TEST_USER_PRIV);
-    expect(result.warnings).toEqual([]);
+    const result = await reconstruct([agg], [post], TEST_USER_PRIV, "https://test.aleph.local");
+    // v3 fixtures emit a LEGACY_SCHEMA warning per deployment (no storeRef);
+    // filter those out so the test asserts only on unexpected warnings.
+    expect(result.warnings.filter((w) => w.code !== "LEGACY_SCHEMA")).toEqual([]);
     expect(result.projects.length).toBe(1);
     const p = result.projects[0];
     expect(p?.pendingWorkflowPrUrl).toBeNull();
@@ -316,7 +318,7 @@ describe("reconstruct — v1/v2 schema compatibility", () => {
     expect(d?.runAttempt).toBeNull();
   });
 
-  it("v2 fixture: runId/runAttempt and pending PR fields round-trip correctly", () => {
+  it("v2 fixture: runId/runAttempt and pending PR fields round-trip correctly", async () => {
     // v2 deployment public has runId + runAttempt; project encrypted blob has
     // pendingWorkflowPrUrl + pendingWorkflowPrNumber.
     const agg = makeAggregate(
@@ -362,8 +364,10 @@ describe("reconstruct — v1/v2 schema compatibility", () => {
       },
     );
 
-    const result = reconstruct([agg], [post], TEST_USER_PRIV);
-    expect(result.warnings).toEqual([]);
+    const result = await reconstruct([agg], [post], TEST_USER_PRIV, "https://test.aleph.local");
+    // v3 fixtures emit a LEGACY_SCHEMA warning per deployment (no storeRef);
+    // filter those out so the test asserts only on unexpected warnings.
+    expect(result.warnings.filter((w) => w.code !== "LEGACY_SCHEMA")).toEqual([]);
     expect(result.projects.length).toBe(1);
     const p = result.projects[0];
     expect(p?.pendingWorkflowPrUrl).toBe("https://github.com/u/r/pull/3");

@@ -8,6 +8,7 @@ import type {
 } from "./types.js";
 import { decryptBlobAsUser } from "./decrypt.js";
 import { groupAmendChains } from "./amend-chain.js";
+import { fetchStoreMessage } from "./aleph-fetch.js";
 
 export interface ReconstructResult {
   projects: RecoveredProject[];
@@ -31,7 +32,8 @@ interface DeploymentPostInner {
   projectId: string;
   public: {
     status: string;
-    cid: string | null;
+    storeRef?: string | null;
+    cid?: string | null; // v3 legacy
     url: string | null;
     createdAt: string;
     finishedAt: string | null;
@@ -49,11 +51,12 @@ interface DeploymentPostInner {
  * The cross-agreement test (backend backlog, Task 35) will enforce that
  * invariant once shipped.
  */
-export function reconstruct(
+export async function reconstruct(
   aggregates: AlephMessage[],
   posts: AlephMessage[],
   userPrivKey: Buffer,
-): ReconstructResult {
+  apiUrl: string,
+): Promise<ReconstructResult> {
   const warnings: RecoveryWarning[] = [];
   const projectsById = new Map<string, RecoveredProject>();
   let decryptionFailures = 0;
@@ -127,10 +130,50 @@ export function reconstruct(
       continue;
     }
 
+    // Schema selection: v4 records carry `storeRef` (canonical pointer to
+    // the STORE message); pre-v4 records carry `cid` directly in the public
+    // block. Read both for backward compat; prefer storeRef when present.
+    const storeRef = inner.public.storeRef ?? null;
+    const legacyCid = inner.public.cid ?? null;
+    let resolvedCid: string | null = null;
+    let storeForgotten = false;
+
+    if (storeRef !== null) {
+      try {
+        const store = await fetchStoreMessage(apiUrl, storeRef);
+        if (store !== null) {
+          resolvedCid = store.content.item_hash;
+        } else {
+          storeForgotten = true;
+          warnings.push({
+            code: "STORE_FORGOTTEN",
+            detail: `Deployment ${inner.deploymentId}: STORE ${storeRef} not found on Aleph (forgotten or pruned)`,
+            messageHash: leaf.item_hash,
+          });
+        }
+      } catch (err) {
+        warnings.push({
+          code: "STORE_FETCH_FAILED",
+          detail: `Deployment ${inner.deploymentId}: failed to fetch STORE ${storeRef}: ${(err as Error).message}`,
+          messageHash: leaf.item_hash,
+        });
+      }
+    } else if (legacyCid !== null) {
+      // v3 legacy — cid was inline. No storeRef to record.
+      resolvedCid = legacyCid;
+      warnings.push({
+        code: "LEGACY_SCHEMA",
+        detail: `Deployment ${inner.deploymentId}: pre-v4 record (cid in public block, no storeRef)`,
+        messageHash: leaf.item_hash,
+      });
+    }
+
     const dep: RecoveredDeployment = {
       id: inner.deploymentId,
       status: inner.public.status,
-      cid: inner.public.cid,
+      storeRef,
+      cid: resolvedCid,
+      storeForgotten,
       url: inner.public.url,
       commit: (decrypted["commit"] as string | null) ?? null,
       commitMessage: (decrypted["commitMessage"] as string | null) ?? null,
