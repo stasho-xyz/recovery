@@ -1,10 +1,15 @@
 export interface EncryptedEnvelope {
-  v: 1;
+  v: 2;
   alg: "aes-256-gcm";
   ct: string;
   iv: string;
   tag: string;
-  deks: { user: string; backend: string };
+  deks: {
+    user: string;
+    backend: string;
+    /** Optional third recipient: deterministic wallet-derived encryption key (Decision #117). */
+    encryption?: string;
+  };
 }
 
 export interface AlephMessage {

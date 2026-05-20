@@ -15,7 +15,7 @@ interface CliArgs {
 }
 
 const DEFAULTS = {
-  channel: "STASHO_CHANNEL_V0",
+  channel: "STASHO_CHANNEL_V1",
   alephApi: "https://api1.aleph.im",
 } as const;
 

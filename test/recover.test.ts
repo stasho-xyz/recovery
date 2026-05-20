@@ -3,7 +3,13 @@ import { readFileSync } from "node:fs";
 import { createCipheriv, randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { encrypt as eciesEncrypt, PrivateKey } from "eciesjs";
+import { Wallet, keccak256, getBytes } from "ethers";
 import { reconstruct } from "../src/reconstruct.js";
+import {
+  deriveEncryptionKey,
+  decryptBlobAsEncryption,
+  derivationMessage,
+} from "../src/decrypt.js";
 import type { AlephMessage, EncryptedEnvelope } from "../src/types.js";
 
 // ─── Encryption helpers (mirrors apps/backend/src/services/encryption.ts) ──────
@@ -20,12 +26,13 @@ const TEST_BACKEND_PUB = deriveUncompressedPub(TEST_BACKEND_PRIV);
 
 /**
  * Minimal dual-envelope encryptBlob for use in inline test fixtures.
- * Matches the wire format produced by the backend's `encryptBlob`.
+ * Matches the wire format produced by the backend's `encryptBlob` (v2).
  */
 function encryptForTest(
   cleartext: Record<string, unknown>,
   userPub: Buffer = TEST_USER_PUB,
   backendPub: Buffer = TEST_BACKEND_PUB,
+  encryptionPub?: Buffer,
 ): EncryptedEnvelope {
   const plaintext = Buffer.from(JSON.stringify(cleartext), "utf8");
   const dek = randomBytes(32);
@@ -34,7 +41,7 @@ function encryptForTest(
   const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   const tag = cipher.getAuthTag();
   return {
-    v: 1,
+    v: 2,
     alg: "aes-256-gcm",
     ct: ciphertext.toString("base64"),
     iv: iv.toString("base64"),
@@ -42,6 +49,13 @@ function encryptForTest(
     deks: {
       user: Buffer.from(eciesEncrypt(userPub, dek)).toString("base64"),
       backend: Buffer.from(eciesEncrypt(backendPub, dek)).toString("base64"),
+      ...(encryptionPub
+        ? {
+            encryption: Buffer.from(
+              eciesEncrypt(encryptionPub, dek),
+            ).toString("base64"),
+          }
+        : {}),
     },
   };
 }
@@ -376,5 +390,110 @@ describe("reconstruct — v1/v2 schema compatibility", () => {
     const d = p?.deployments[0];
     expect(d?.runId).toBe(42);
     expect(d?.runAttempt).toBe(1);
+  });
+});
+
+// ─── Decision #117 — deterministic encryption-key derivation ──────────────────
+
+/**
+ * FROZEN derivation message for the zero-address cross-check.
+ * Must be byte-for-byte identical to the string produced by:
+ *   apps/web/src/lib/encryption-key.ts :: derivationMessage("0x0000000000000000000000000000000000000000")
+ */
+const FROZEN_DERIVATION_MESSAGE_ZERO_ADDR =
+  "Stasho Cloud — encryption key\n" +
+  "\n" +
+  "Sign to derive your personal encryption key. This key lets your\n" +
+  "browser decrypt your deployment history.\n" +
+  "\n" +
+  "This signature does not authorize any transaction, payment, or\n" +
+  "spending. It is free and safe.\n" +
+  "\n" +
+  "Wallet: 0x0000000000000000000000000000000000000000\n" +
+  "Version: 1";
+
+describe("deriveEncryptionKey — frozen derivationMessage pin", () => {
+  it("derivationMessage(zero-addr) matches frozen literal exactly", () => {
+    // Calls decrypt.ts's actual `derivationMessage` so an edit to that copy
+    // fails this test. The frozen literal pins the string shared by BOTH the
+    // recovery script and apps/web/src/lib/encryption-key.ts; the web-side
+    // test asserts the same literal against its own copy.
+    expect(
+      derivationMessage("0x0000000000000000000000000000000000000000"),
+    ).toBe(FROZEN_DERIVATION_MESSAGE_ZERO_ADDR);
+  });
+});
+
+describe("deriveEncryptionKey — round-trip via deks.encryption", () => {
+  it("decryptBlobAsEncryption recovers cleartext encrypted to the derived key", async () => {
+    // Use a fixed test wallet key so the test is deterministic.
+    const walletPrivHex = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+    const walletPrivKey = Buffer.from(walletPrivHex, "hex");
+
+    // Step 1: derive E.priv the same way decrypt.ts does.
+    const encryptionPrivKey = await deriveEncryptionKey(walletPrivKey);
+    expect(encryptionPrivKey).toHaveLength(32);
+
+    // Step 2: derive E.pub from E.priv so we can ECIES-wrap a DEK to it.
+    const encryptionPub = Buffer.from(
+      new PrivateKey(encryptionPrivKey).publicKey.uncompressed,
+    );
+    expect(encryptionPub).toHaveLength(65);
+    expect(encryptionPub[0]).toBe(0x04);
+
+    // Step 3: build a real v2 envelope with deks.encryption wrapping a DEK to E.pub.
+    const cleartext = { secret: "hello-encryption-117", value: 42 };
+    const envelope = encryptForTest(cleartext, TEST_USER_PUB, TEST_BACKEND_PUB, encryptionPub);
+
+    expect(envelope.v).toBe(2);
+    expect(envelope.deks.encryption).toBeTruthy();
+
+    // Step 4: decrypt via deks.encryption and verify cleartext is recovered.
+    const recovered = decryptBlobAsEncryption(envelope, encryptionPrivKey);
+    expect(recovered).toEqual(cleartext);
+  });
+
+  it("decryptBlobAsEncryption throws when envelope has no deks.encryption", () => {
+    // An envelope without deks.encryption (user/backend only) must throw clearly.
+    const envelope = encryptForTest({ x: 1 });
+    expect(() => decryptBlobAsEncryption(envelope, Buffer.alloc(32))).toThrow(
+      "envelope has no deks.encryption recipient",
+    );
+  });
+
+  it("deriveEncryptionKey is deterministic: same wallet → same key", async () => {
+    const walletPrivKey = Buffer.from("11".repeat(32), "hex");
+    const k1 = await deriveEncryptionKey(walletPrivKey);
+    const k2 = await deriveEncryptionKey(walletPrivKey);
+    expect(k1.toString("hex")).toBe(k2.toString("hex"));
+  });
+
+  it("deriveEncryptionKey cross-check: derived pubkey matches ethers Wallet derivation", async () => {
+    // This is the canonical cross-compatibility check for Decision #117.
+    // Both the recovery script and the browser derive:
+    //   E.priv = keccak256(EIP-191_personal_sign(derivationMessage(checksummedAddr)))
+    // We verify the round-trip by doing the same derivation here inline using
+    // the raw ethers v6 primitives and asserting the result matches deriveEncryptionKey.
+    const walletPrivHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const walletPrivKey = Buffer.from(walletPrivHex, "hex");
+    const wallet = new Wallet("0x" + walletPrivHex);
+
+    const derivMsg =
+      "Stasho Cloud — encryption key\n" +
+      "\n" +
+      "Sign to derive your personal encryption key. This key lets your\n" +
+      "browser decrypt your deployment history.\n" +
+      "\n" +
+      "This signature does not authorize any transaction, payment, or\n" +
+      "spending. It is free and safe.\n" +
+      "\n" +
+      `Wallet: ${wallet.address}\n` +
+      "Version: 1";
+
+    const sig = await wallet.signMessage(derivMsg);
+    const expectedPriv = Buffer.from(getBytes(keccak256(getBytes(sig))));
+
+    const derivedPriv = await deriveEncryptionKey(walletPrivKey);
+    expect(derivedPriv.toString("hex")).toBe(expectedPriv.toString("hex"));
   });
 });
