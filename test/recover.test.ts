@@ -15,25 +15,35 @@ import type { AlephMessage, EncryptedEnvelope } from "../src/types.js";
 // ─── Encryption helpers (mirrors apps/backend/src/services/encryption.ts) ──────
 
 const TEST_USER_PRIV = Buffer.from("11".repeat(32), "hex");
-const TEST_BACKEND_PRIV = Buffer.from("22".repeat(32), "hex");
 
 function deriveUncompressedPub(priv: Buffer): Buffer {
   return Buffer.from(new PrivateKey(priv).publicKey.uncompressed);
 }
 
 const TEST_USER_PUB = deriveUncompressedPub(TEST_USER_PRIV);
-const TEST_BACKEND_PUB = deriveUncompressedPub(TEST_BACKEND_PRIV);
 
 /**
- * Minimal dual-envelope encryptBlob for use in inline test fixtures.
- * Matches the wire format produced by the backend's `encryptBlob` (v2).
+ * Minimal `encryptBlob` for use in inline test fixtures.
+ *
+ * Matches the wire format produced by the backend's `encryptBlob` since
+ * envelope v3 (Thread 2 step 3, 2026-05-22): `v: 3` with exactly two DEK
+ * slots — `user` (wallet pubkey) and `encryption` (deterministic
+ * wallet-derived key, Decision #117). The pre-v3 `deks.backend` slot is gone.
+ *
+ * Pass `encryptionPub` to control which key the `encryption` DEK is wrapped
+ * to. Pass `omitEncryption: true` to build a deliberately malformed envelope
+ * with no `encryption` recipient (for negative-path coverage).
  */
 function encryptForTest(
   cleartext: Record<string, unknown>,
-  userPub: Buffer = TEST_USER_PUB,
-  backendPub: Buffer = TEST_BACKEND_PUB,
-  encryptionPub?: Buffer,
+  opts: {
+    userPub?: Buffer;
+    encryptionPub?: Buffer;
+    omitEncryption?: boolean;
+  } = {},
 ): EncryptedEnvelope {
+  const userPub = opts.userPub ?? TEST_USER_PUB;
+  const encryptionPub = opts.encryptionPub ?? TEST_USER_PUB;
   const plaintext = Buffer.from(JSON.stringify(cleartext), "utf8");
   const dek = randomBytes(32);
   const iv = randomBytes(12);
@@ -41,21 +51,20 @@ function encryptForTest(
   const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   const tag = cipher.getAuthTag();
   return {
-    v: 2,
+    v: 3,
     alg: "aes-256-gcm",
     ct: ciphertext.toString("base64"),
     iv: iv.toString("base64"),
     tag: tag.toString("base64"),
     deks: {
       user: Buffer.from(eciesEncrypt(userPub, dek)).toString("base64"),
-      backend: Buffer.from(eciesEncrypt(backendPub, dek)).toString("base64"),
-      ...(encryptionPub
-        ? {
+      ...(opts.omitEncryption
+        ? {}
+        : {
             encryption: Buffer.from(
               eciesEncrypt(encryptionPub, dek),
             ).toString("base64"),
-          }
-        : {}),
+          }),
     },
   };
 }
@@ -273,8 +282,12 @@ describe("reconstruct — corruption resilience", () => {
   });
 });
 
-describe("reconstruct — v1/v2 schema compatibility", () => {
-  it("v1 fixture: runId/runAttempt absent → both read as null, no crash", async () => {
+describe("reconstruct — record-schema field compatibility", () => {
+  // These fixtures use v3 envelopes (current format) but exercise older
+  // *record* schemas — the public/encrypted field sets, independent of the
+  // envelope version. v1-shaped records omit runId/runAttempt and pending-PR
+  // fields; v2-shaped records carry them.
+  it("v1-shaped record: runId/runAttempt absent → both read as null, no crash", async () => {
     // v1 deployment public has no runId/runAttempt fields; v1 project encrypted
     // blob has no pendingWorkflowPr* fields. Both should gracefully produce null.
     const agg = makeAggregate(
@@ -332,7 +345,7 @@ describe("reconstruct — v1/v2 schema compatibility", () => {
     expect(d?.runAttempt).toBeNull();
   });
 
-  it("v2 fixture: runId/runAttempt and pending PR fields round-trip correctly", async () => {
+  it("v2-shaped record: runId/runAttempt and pending PR fields round-trip correctly", async () => {
     // v2 deployment public has runId + runAttempt; project encrypted blob has
     // pendingWorkflowPrUrl + pendingWorkflowPrNumber.
     const agg = makeAggregate(
@@ -441,11 +454,11 @@ describe("deriveEncryptionKey — round-trip via deks.encryption", () => {
     expect(encryptionPub).toHaveLength(65);
     expect(encryptionPub[0]).toBe(0x04);
 
-    // Step 3: build a real v2 envelope with deks.encryption wrapping a DEK to E.pub.
+    // Step 3: build a real v3 envelope with deks.encryption wrapping a DEK to E.pub.
     const cleartext = { secret: "hello-encryption-117", value: 42 };
-    const envelope = encryptForTest(cleartext, TEST_USER_PUB, TEST_BACKEND_PUB, encryptionPub);
+    const envelope = encryptForTest(cleartext, { encryptionPub });
 
-    expect(envelope.v).toBe(2);
+    expect(envelope.v).toBe(3);
     expect(envelope.deks.encryption).toBeTruthy();
 
     // Step 4: decrypt via deks.encryption and verify cleartext is recovered.
@@ -454,8 +467,8 @@ describe("deriveEncryptionKey — round-trip via deks.encryption", () => {
   });
 
   it("decryptBlobAsEncryption throws when envelope has no deks.encryption", () => {
-    // An envelope without deks.encryption (user/backend only) must throw clearly.
-    const envelope = encryptForTest({ x: 1 });
+    // A (legacy-shaped) envelope without deks.encryption must throw clearly.
+    const envelope = encryptForTest({ x: 1 }, { omitEncryption: true });
     expect(() => decryptBlobAsEncryption(envelope, Buffer.alloc(32))).toThrow(
       "envelope has no deks.encryption recipient",
     );

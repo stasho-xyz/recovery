@@ -1,14 +1,28 @@
 export interface EncryptedEnvelope {
-  v: 2;
+  /**
+   * Envelope format version. Current backend writes `v: 3`. Older records on
+   * the public ledger may carry `v: 1` / `v: 2`; the recovery script reads
+   * envelopes version-agnostically (via `deks.user`), so it accepts all three.
+   */
+  v: 1 | 2 | 3;
   alg: "aes-256-gcm";
   ct: string;
   iv: string;
   tag: string;
   deks: {
+    /** Wallet-pubkey recipient — the recovery script's primary decrypt path. */
     user: string;
-    backend: string;
-    /** Optional third recipient: deterministic wallet-derived encryption key (Decision #117). */
+    /**
+     * Deterministic wallet-derived encryption key (Decision #117). Mandatory
+     * since envelope v3. Absent on pre-v3 records.
+     */
     encryption?: string;
+    /**
+     * Backend standing-key recipient. Removed in envelope v3 (Thread 2 step 3,
+     * 2026-05-22) — the backend is no longer a standing decrypt recipient.
+     * Present only on legacy v1/v2 records; never read by the recovery script.
+     */
+    backend?: string;
   };
 }
 

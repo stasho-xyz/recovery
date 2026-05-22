@@ -4,10 +4,10 @@ import { Wallet, keccak256, getBytes } from "ethers";
 import type { EncryptedEnvelope } from "./types.js";
 
 /**
- * Decrypt a dual-envelope blob using the user's ECIES-wrapped DEK copy.
+ * Decrypt an encrypted blob using the user's ECIES-wrapped DEK copy.
  *
- * Mirrors `decryptBlobAsBackend` in the backend, but reads `deks.user`
- * instead of `deks.backend`. Throws on auth tag mismatch or wrong key.
+ * Mirrors `decryptBlobAsUser` in the backend's `encryption.ts`, reading the
+ * `deks.user` slot. Throws on auth tag mismatch or wrong key.
  */
 export function decryptBlobAsUser(
   envelope: EncryptedEnvelope,
