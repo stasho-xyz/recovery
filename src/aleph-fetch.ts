@@ -3,24 +3,31 @@ import type { AlephMessage } from "./types.js";
 const PAGE_SIZE = 200;
 
 /**
- * Fetch every message of a given type for an address in a channel,
+ * Fetch every message of a given type for a set of senders in a channel,
  * walking the Aleph HTTP API's pagination until the last page is drained.
+ *
+ * `addresses` must be non-empty (throws otherwise); the Aleph HTTP API
+ * accepts comma-separated values in the `addresses` query parameter and
+ * returns the union of messages sent by any of them.
  *
  * Depends only on the public `/api/v0/messages.json` endpoint — no SDK.
  */
 export async function fetchAllMessages(
   apiUrl: string,
   channel: string,
-  address: string,
+  addresses: readonly string[],
   messageType: "AGGREGATE" | "POST",
 ): Promise<AlephMessage[]> {
+  if (addresses.length === 0) {
+    throw new Error("fetchAllMessages: addresses must be non-empty");
+  }
   const all: AlephMessage[] = [];
   let page = 1;
 
   while (true) {
     const params = new URLSearchParams({
       channels: channel,
-      addresses: address,
+      addresses: addresses.join(","),
       messageType,
       pagination: String(PAGE_SIZE),
       page: String(page),

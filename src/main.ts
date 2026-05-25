@@ -2,8 +2,9 @@
 import { writeFileSync } from "node:fs";
 import { Wallet } from "ethers";
 import { fetchAllMessages } from "./aleph-fetch.js";
+import { orchestrate } from "./orchestrate.js";
 import { reconstruct } from "./reconstruct.js";
-import type { RecoveryOutput } from "./types.js";
+import type { MessageFetcher, RecoveryOutput } from "./types.js";
 
 interface CliArgs {
   address: string;
@@ -16,7 +17,7 @@ interface CliArgs {
 
 const DEFAULTS = {
   channel: "STASHO_CHANNEL_V1",
-  alephApi: "https://api1.aleph.im",
+  alephApi: "https://api.aleph.im",
 } as const;
 
 // Exit codes — documented so users can script around them.
@@ -140,20 +141,17 @@ async function main(): Promise<void> {
     `Fetching messages from ${args.alephApi} (channel ${args.channel})...`,
   );
 
+  // Build the fetcher closure for the orchestration layer. Baked in:
+  // apiUrl + channel from the CLI args. The orchestrator only ever varies
+  // messageType and addresses.
+  const fetcher: MessageFetcher = ({ messageType, addresses }) =>
+    fetchAllMessages(args.alephApi, args.channel, addresses, messageType);
+
   let aggregates, posts;
   try {
-    aggregates = await fetchAllMessages(
-      args.alephApi,
-      args.channel,
-      args.address,
-      "AGGREGATE",
-    );
-    posts = await fetchAllMessages(
-      args.alephApi,
-      args.channel,
-      args.address,
-      "POST",
-    );
+    const fetched = await orchestrate({ fetcher }, args.address);
+    aggregates = fetched.aggregates;
+    posts = fetched.posts;
   } catch (err) {
     process.stderr.write(
       `error: Aleph API unreachable at ${args.alephApi}: ${(err as Error).message}\n`,

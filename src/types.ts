@@ -116,3 +116,14 @@ export interface RecoveryOutput {
   projects: RecoveredProject[];
   warnings: RecoveryWarning[];
 }
+
+/**
+ * Abstraction over `fetchAllMessages` so the orchestration layer is testable
+ * without globalThis.fetch stubs. Built as a closure in `main.ts` that bakes
+ * in `apiUrl` and `channel`; tests pass an in-memory implementation that
+ * records calls.
+ */
+export type MessageFetcher = (args: {
+  messageType: "AGGREGATE" | "POST";
+  addresses: readonly string[];
+}) => Promise<AlephMessage[]>;
