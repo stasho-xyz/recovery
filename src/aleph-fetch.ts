@@ -1,4 +1,5 @@
 import type { AlephMessage } from "./types.js";
+import { ccnAddress } from "./ccn-address.js";
 
 const PAGE_SIZE = 200;
 
@@ -27,7 +28,7 @@ export async function fetchAllMessages(
   while (true) {
     const params = new URLSearchParams({
       channels: channel,
-      addresses: addresses.join(","),
+      addresses: addresses.map(ccnAddress).join(","),
       messageType,
       pagination: String(PAGE_SIZE),
       page: String(page),
