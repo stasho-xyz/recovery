@@ -53,9 +53,17 @@ export async function fetchAllMessages(
 /**
  * Fetch a single STORE message by its item_hash. Returns the message's
  * inner content (only the bits the reconstructor needs) or null when the
- * STORE is FORGOTten (404) or the message exists but isn't a STORE.
- * Throws on transient transport / parse failures so callers can
- * differentiate "deleted" from "unreachable."
+ * hash never existed (404), when the STORE is FORGOTten (a 200 with
+ * `status: "forgotten"` and its content stripped — NOT a 404), or when the
+ * message exists but isn't a STORE. Throws on transient transport / parse
+ * failures so callers can differentiate "deleted" from "unreachable."
+ *
+ * The single-message endpoint (`/api/v0/messages/<hash>`) wraps the message
+ * under a `message` key — `{status, item_hash, message: {type, content,
+ * ...}}` — unlike the list endpoint (`/api/v0/messages.json`, see
+ * `fetchAllMessages` above) which returns flat `{type, content}` objects
+ * per message. Verified live 2026-07-30 (Decision #310). No flat-shape
+ * fallback.
  */
 export async function fetchStoreMessage(
   apiUrl: string,
@@ -70,9 +78,12 @@ export async function fetchStoreMessage(
     );
   }
   const body = (await res.json()) as {
-    type?: string;
-    content?: { item_hash?: string };
+    status?: string;
+    message?: { type?: string; content?: { item_hash?: string } };
   };
-  if (body.type !== "STORE" || !body.content?.item_hash) return null;
-  return { content: { item_hash: body.content.item_hash } };
+  if (body.status === "forgotten") return null;
+  if (body.message?.type !== "STORE" || !body.message.content?.item_hash) {
+    return null;
+  }
+  return { content: { item_hash: body.message.content.item_hash } };
 }
