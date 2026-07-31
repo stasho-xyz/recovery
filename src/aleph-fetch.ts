@@ -29,7 +29,11 @@ export async function fetchAllMessages(
     const params = new URLSearchParams({
       channels: channel,
       addresses: addresses.map(ccnAddress).join(","),
-      messageType,
+      // `msgTypes` (plural) is the one type-filter param the CCN honors
+      // server-side; `messageType` is silently ignored (verified live
+      // 2026-07-28 — apps/backend/src/services/aleph-http-adapter.ts has
+      // the full writeup). Callers still filter by `type` client-side.
+      msgTypes: messageType,
       pagination: String(PAGE_SIZE),
       page: String(page),
     });

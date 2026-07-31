@@ -24,6 +24,22 @@ describe("fetchAllMessages CCN address boundary", () => {
     const decoded = decodeURIComponent(calls[0]!);
     expect(decoded).toContain(`${CHECK},${CHECK}`);
   });
+
+  it("filters by type via the CCN-honored msgTypes param, not the ignored messageType", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        calls.push(String(url));
+        return new Response(JSON.stringify({ messages: [] }), { status: 200 });
+      }),
+    );
+
+    await fetchAllMessages("https://ccn.test", "CH", [CHECK], "AGGREGATE");
+
+    expect(calls[0]).toContain("msgTypes=AGGREGATE");
+    expect(calls[0]).not.toContain("messageType=");
+  });
 });
 
 describe("fetchStoreMessage single-message endpoint shape", () => {
