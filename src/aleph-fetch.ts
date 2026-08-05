@@ -54,8 +54,20 @@ export async function fetchAllMessages(
   return all;
 }
 
-/** Why a STORE lookup produced no CID, short of the STORE being FORGOTten. */
-export type StoreAbsentReason = "not-found" | "not-a-store" | "no-item-hash";
+/**
+ * Why a STORE lookup produced no CID, short of the STORE being gone
+ * (`forgotten` / `removed`).
+ *
+ * `rejected` and `pending` are CCN message states, not response shapes:
+ * pyaleph's single-message endpoint answers 200 with those `status` values and
+ * a payload that is not an accepted message. Neither says the bytes are gone.
+ */
+export type StoreAbsentReason =
+  | "not-found"
+  | "not-a-store"
+  | "no-item-hash"
+  | "rejected"
+  | "pending";
 
 /**
  * The distinguishable outcomes of resolving a STORE message by item_hash.
@@ -63,15 +75,48 @@ export type StoreAbsentReason = "not-found" | "not-a-store" | "no-item-hash";
  * package is a standalone zero-backend recovery tool and cannot import from
  * the backend workspace, so the shape is duplicated deliberately.
  *
- * `forgotten` and `absent` are kept distinct because the recovery report tells
- * a user, in a disaster, whether their bytes are gone. "Forgotten" is a
- * definitive statement; a 404 is the CCN not having the message, which is not
- * the same claim and must not be reported as one.
+ * The "gone" kinds are kept distinct from `absent`, and from each other,
+ * because the recovery report tells a user, in a disaster, whether their bytes
+ * are gone and why:
+ *
+ *   - `forgotten` — someone broadcast a FORGET (typically a project delete).
+ *   - `removed` — Aleph's own garbage collection reclaimed the message after
+ *     its payer ran out of balance/credits. Same outcome for the bytes, a
+ *     completely different cause, so it gets its own warning code.
+ *   - `absent` — a 404, a non-STORE, a CID-less STORE, or a `rejected` /
+ *     `pending` message. None of these is a statement that the bytes are gone;
+ *     a 404 in particular is just the CCN not having the message.
  */
 export type StoreLookup =
   | { kind: "resolved"; itemHash: string }
   | { kind: "forgotten" }
+  | { kind: "removed" }
   | { kind: "absent"; reason: StoreAbsentReason };
+
+/**
+ * Classify the 200 body of the single-message endpoint by pyaleph's
+ * `MessageStatus` (`types/message_status.py` has six values), not by whether a
+ * `content.item_hash` happens to be present.
+ *
+ * `removing` and `processed` are the two states that serialize the full
+ * message, so they fall through to the STORE checks and resolve normally; a
+ * `removing` STORE is still retrievable, its removal has only been scheduled.
+ */
+function classifyStoreBody(body: {
+  status?: string;
+  message?: { type?: string; content?: { item_hash?: string } };
+}): StoreLookup {
+  if (body.status === "forgotten") return { kind: "forgotten" };
+  if (body.status === "removed") return { kind: "removed" };
+  if (body.status === "rejected") return { kind: "absent", reason: "rejected" };
+  if (body.status === "pending") return { kind: "absent", reason: "pending" };
+  if (body.message?.type !== "STORE") {
+    return { kind: "absent", reason: "not-a-store" };
+  }
+  const contentItemHash = body.message.content?.item_hash;
+  if (!contentItemHash) return { kind: "absent", reason: "no-item-hash" };
+  return { kind: "resolved", itemHash: contentItemHash };
+}
 
 /**
  * Fetch a single STORE message by its item_hash and classify the outcome.
@@ -81,6 +126,12 @@ export type StoreLookup =
  * A FORGOTten STORE is a 200 with `status: "forgotten"` and its content
  * stripped — NOT a 404 (verified live 2026-07-30, Decision #310). So a 404
  * means "the CCN has no such message", never "the bytes were forgotten".
+ *
+ * HTTP 410 Gone is the second face of `removed`: pyaleph's
+ * `_get_message_with_status` raises `web.HTTPGone` when the status is `REMOVED`
+ * but the `removed_messages` snapshot row is missing (legacy removals that
+ * predate the snapshot). It is intercepted before the generic non-OK throw
+ * because it carries the same "the bytes are gone" evidence as the 200 form.
  *
  * The single-message endpoint (`/api/v0/messages/<hash>`) wraps the message
  * under a `message` key — `{status, item_hash, message: {type, content,
@@ -95,6 +146,7 @@ export async function fetchStoreMessage(
   const url = `${apiUrl}/api/v0/messages/${itemHash}`;
   const res = await fetch(url);
   if (res.status === 404) return { kind: "absent", reason: "not-found" };
+  if (res.status === 410) return { kind: "removed" };
   if (!res.ok) {
     throw new Error(
       `fetchStoreMessage ${itemHash}: HTTP ${res.status} ${res.statusText}`,
@@ -104,11 +156,5 @@ export async function fetchStoreMessage(
     status?: string;
     message?: { type?: string; content?: { item_hash?: string } };
   };
-  if (body.status === "forgotten") return { kind: "forgotten" };
-  if (body.message?.type !== "STORE") {
-    return { kind: "absent", reason: "not-a-store" };
-  }
-  const contentItemHash = body.message.content?.item_hash;
-  if (!contentItemHash) return { kind: "absent", reason: "no-item-hash" };
-  return { kind: "resolved", itemHash: contentItemHash };
+  return classifyStoreBody(body);
 }

@@ -79,10 +79,15 @@ export interface RecoveredDeployment {
    *   - `"forgotten"`   — the STORE was definitively FORGOTten on Aleph
    *     (typically because the project was deleted). The deployment metadata
    *     is preserved here for audit, but the bytes are unrecoverable through
-   *     Aleph's index. This is the only value that makes that claim.
-   *   - `"absent"`      — the CCN has no such message, it isn't a STORE, or it
-   *     carries no CID. NOT a statement that the bytes were forgotten: a
-   *     different CCN, or the same one later, may still have it.
+   *     Aleph's index.
+   *   - `"removed"`     — Aleph's own garbage collection reclaimed the STORE
+   *     after its payer ran out of balance or credits. Nobody issued a FORGET.
+   *     The bytes are equally unrecoverable through Aleph's index; the cause is
+   *     different, and so is the remedy (fund the account before re-uploading).
+   *   - `"absent"`      — the CCN has no such message, it isn't a STORE, it
+   *     carries no CID, or it is rejected / still pending. NOT a statement that
+   *     the bytes were forgotten: a different CCN, or the same one later, may
+   *     still have it.
    *   - `"unreachable"` — the lookup itself failed (transport / HTTP error).
    *     Says nothing about the STORE; retry against a healthy CCN.
    *   - `"legacy-inline"` — pre-v4 record whose CID was inline in the public
@@ -94,6 +99,7 @@ export interface RecoveredDeployment {
   storeStatus:
     | "resolved"
     | "forgotten"
+    | "removed"
     | "absent"
     | "unreachable"
     | "legacy-inline"

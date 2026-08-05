@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { createCipheriv, randomBytes } from "node:crypto";
 import { join } from "node:path";
@@ -508,5 +508,146 @@ describe("deriveEncryptionKey — round-trip via deks.encryption", () => {
 
     const derivedPriv = await deriveEncryptionKey(walletPrivKey);
     expect(derivedPriv.toString("hex")).toBe(expectedPriv.toString("hex"));
+  });
+});
+
+describe("reconstruct — v4 storeRef resolution outcomes", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function v4Fixture(storeRef: string): AlephMessage[] {
+    const agg = makeAggregate(
+      "proj_v4",
+      {
+        framework: "nextjs-static",
+        deployTarget: "ipfs",
+        createdAt: "2026-05-03T00:00:00.000Z",
+        updatedAt: "2026-05-03T00:00:00.000Z",
+        deleted: false,
+      },
+      {
+        name: "v4-app",
+        source: "github",
+        repo: "acme/v4-app",
+        branch: "main",
+        installationId: 1,
+        buildCommand: "npm run build",
+        outputDir: "dist",
+      },
+    );
+    const post = makeCreationPost(
+      "deploy_v4",
+      "proj_v4",
+      {
+        status: "live",
+        storeRef,
+        url: "https://example.com",
+        createdAt: "2026-05-03T00:00:00.000Z",
+        finishedAt: "2026-05-03T00:01:00.000Z",
+      },
+      {
+        commit: "abc1234",
+        commitMessage: "v4 deploy",
+        branch: "main",
+        actionsRunUrl: null,
+        error: null,
+      },
+    );
+    return [agg, post];
+  }
+
+  /**
+   * The disaster-report claim this adds. "Removed" tells a user Aleph's own
+   * garbage collection reclaimed their artifact after the payer ran out of
+   * balance/credits — a different cause, and a different remedy, from the
+   * FORGET that `storeStatus: "forgotten"` reports.
+   */
+  it("reports storeStatus removed + STORE_REMOVED for a GC'd STORE", async () => {
+    const [agg, post] = v4Fixture("store_gc");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              status: "removed",
+              item_hash: "store_gc",
+              message: { type: "STORE", item_hash: "store_gc" },
+              reason: "credit_insufficient",
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+
+    const result = await reconstruct(
+      [agg!],
+      [post!],
+      TEST_USER_PRIV,
+      "https://test.aleph.local",
+    );
+
+    const d = result.projects[0]?.deployments[0];
+    expect(d?.cid).toBeNull();
+    expect(d?.storeStatus).toBe("removed");
+    expect(result.warnings.some((w) => w.code === "STORE_REMOVED")).toBe(true);
+    // It must never be reported as a user-issued FORGET, or as merely absent.
+    expect(result.warnings.some((w) => w.code === "STORE_FORGOTTEN")).toBe(false);
+    expect(result.warnings.some((w) => w.code === "STORE_ABSENT")).toBe(false);
+  });
+
+  it("still reports storeStatus forgotten + STORE_FORGOTTEN for a FORGOTten STORE", async () => {
+    const [agg, post] = v4Fixture("store_forgot");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              status: "forgotten",
+              item_hash: "store_forgot",
+              message: { type: "STORE", item_hash: "store_forgot" },
+              forgotten_by: ["some_forget_hash"],
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+
+    const result = await reconstruct(
+      [agg!],
+      [post!],
+      TEST_USER_PRIV,
+      "https://test.aleph.local",
+    );
+
+    const d = result.projects[0]?.deployments[0];
+    expect(d?.storeStatus).toBe("forgotten");
+    expect(result.warnings.some((w) => w.code === "STORE_FORGOTTEN")).toBe(true);
+    expect(result.warnings.some((w) => w.code === "STORE_REMOVED")).toBe(false);
+  });
+
+  it("keeps a 404 as storeStatus absent, never removed", async () => {
+    const [agg, post] = v4Fixture("store_missing");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ message: "Not Found" }), { status: 404 }),
+      ),
+    );
+
+    const result = await reconstruct(
+      [agg!],
+      [post!],
+      TEST_USER_PRIV,
+      "https://test.aleph.local",
+    );
+
+    const d = result.projects[0]?.deployments[0];
+    expect(d?.storeStatus).toBe("absent");
+    expect(result.warnings.some((w) => w.code === "STORE_ABSENT")).toBe(true);
+    expect(result.warnings.some((w) => w.code === "STORE_REMOVED")).toBe(false);
   });
 });

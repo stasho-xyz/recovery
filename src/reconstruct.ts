@@ -136,9 +136,10 @@ export async function reconstruct(
     const storeRef = inner.public.storeRef ?? null;
     const legacyCid = inner.public.cid ?? null;
     let resolvedCid: string | null = null;
-    // Only a 200 + `status: "forgotten"` may report "forgotten" — that is the
-    // one outcome that tells a user in a disaster their bytes are gone. A 404
-    // is the CCN not having the message, which is a different claim.
+    // Only the two "gone" outcomes may tell a user in a disaster their bytes
+    // are gone: a 200 + `status: "forgotten"` (someone FORGOT it) and a 200 +
+    // `status: "removed"` / HTTP 410 (Aleph's GC reclaimed it). A 404 is the
+    // CCN not having the message, which is a different claim.
     let storeStatus: RecoveredDeployment["storeStatus"] = "no-artifact";
 
     if (storeRef !== null) {
@@ -154,6 +155,16 @@ export async function reconstruct(
             detail:
               `Deployment ${inner.deploymentId}: STORE ${storeRef} was ` +
               "FORGOTten on Aleph (bytes are gone)",
+            messageHash: leaf.item_hash,
+          });
+        } else if (store.kind === "removed") {
+          storeStatus = "removed";
+          warnings.push({
+            code: "STORE_REMOVED",
+            detail:
+              `Deployment ${inner.deploymentId}: STORE ${storeRef} was ` +
+              "REMOVED by Aleph's garbage collection, not by a FORGET " +
+              "(bytes are gone)",
             messageHash: leaf.item_hash,
           });
         } else {
