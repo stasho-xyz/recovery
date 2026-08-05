@@ -136,22 +136,38 @@ export async function reconstruct(
     const storeRef = inner.public.storeRef ?? null;
     const legacyCid = inner.public.cid ?? null;
     let resolvedCid: string | null = null;
-    let storeForgotten = false;
+    // Only a 200 + `status: "forgotten"` may report "forgotten" — that is the
+    // one outcome that tells a user in a disaster their bytes are gone. A 404
+    // is the CCN not having the message, which is a different claim.
+    let storeStatus: RecoveredDeployment["storeStatus"] = "no-artifact";
 
     if (storeRef !== null) {
       try {
         const store = await fetchStoreMessage(apiUrl, storeRef);
-        if (store !== null) {
-          resolvedCid = store.content.item_hash;
-        } else {
-          storeForgotten = true;
+        if (store.kind === "resolved") {
+          resolvedCid = store.itemHash;
+          storeStatus = "resolved";
+        } else if (store.kind === "forgotten") {
+          storeStatus = "forgotten";
           warnings.push({
             code: "STORE_FORGOTTEN",
-            detail: `Deployment ${inner.deploymentId}: STORE ${storeRef} not found on Aleph (forgotten or pruned)`,
+            detail:
+              `Deployment ${inner.deploymentId}: STORE ${storeRef} was ` +
+              "FORGOTten on Aleph (bytes are gone)",
+            messageHash: leaf.item_hash,
+          });
+        } else {
+          storeStatus = "absent";
+          warnings.push({
+            code: "STORE_ABSENT",
+            detail:
+              `Deployment ${inner.deploymentId}: STORE ${storeRef} could not ` +
+              `be resolved (${store.reason}); not treated as forgotten`,
             messageHash: leaf.item_hash,
           });
         }
       } catch (err) {
+        storeStatus = "unreachable";
         warnings.push({
           code: "STORE_FETCH_FAILED",
           detail: `Deployment ${inner.deploymentId}: failed to fetch STORE ${storeRef}: ${(err as Error).message}`,
@@ -161,6 +177,7 @@ export async function reconstruct(
     } else if (legacyCid !== null) {
       // v3 legacy — cid was inline. No storeRef to record.
       resolvedCid = legacyCid;
+      storeStatus = "legacy-inline";
       warnings.push({
         code: "LEGACY_SCHEMA",
         detail: `Deployment ${inner.deploymentId}: pre-v4 record (cid in public block, no storeRef)`,
@@ -173,7 +190,7 @@ export async function reconstruct(
       status: inner.public.status,
       storeRef,
       cid: resolvedCid,
-      storeForgotten,
+      storeStatus,
       url: inner.public.url,
       commit: (decrypted["commit"] as string | null) ?? null,
       commitMessage: (decrypted["commitMessage"] as string | null) ?? null,

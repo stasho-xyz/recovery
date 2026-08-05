@@ -71,12 +71,33 @@ export interface RecoveredDeployment {
   storeRef: string | null;
   cid: string | null;
   /**
-   * True when the STORE referenced by `storeRef` is no longer on Aleph
-   * (FORGOTten — typically because the project was deleted). The
-   * deployment metadata is preserved here for audit, but the artifact
-   * bytes are unrecoverable through Aleph's index.
+   * Outcome of resolving `storeRef`. Distinguishes the ways a CID can fail to
+   * come back, because this report is what a user reads in a disaster to learn
+   * whether their artifact bytes still exist:
+   *
+   *   - `"resolved"`    — `cid` is populated; the artifact is retrievable.
+   *   - `"forgotten"`   — the STORE was definitively FORGOTten on Aleph
+   *     (typically because the project was deleted). The deployment metadata
+   *     is preserved here for audit, but the bytes are unrecoverable through
+   *     Aleph's index. This is the only value that makes that claim.
+   *   - `"absent"`      — the CCN has no such message, it isn't a STORE, or it
+   *     carries no CID. NOT a statement that the bytes were forgotten: a
+   *     different CCN, or the same one later, may still have it.
+   *   - `"unreachable"` — the lookup itself failed (transport / HTTP error).
+   *     Says nothing about the STORE; retry against a healthy CCN.
+   *   - `"legacy-inline"` — pre-v4 record whose CID was inline in the public
+   *     block, so no STORE lookup was performed.
+   *   - `"no-artifact"` — the record references neither a `storeRef` nor an
+   *     inline CID (e.g. a deployment that never reached a published
+   *     artifact). Nothing to resolve.
    */
-  storeForgotten: boolean;
+  storeStatus:
+    | "resolved"
+    | "forgotten"
+    | "absent"
+    | "unreachable"
+    | "legacy-inline"
+    | "no-artifact";
   url: string | null;
   commit: string | null;
   commitMessage: string | null;

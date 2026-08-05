@@ -54,28 +54,47 @@ export async function fetchAllMessages(
   return all;
 }
 
+/** Why a STORE lookup produced no CID, short of the STORE being FORGOTten. */
+export type StoreAbsentReason = "not-found" | "not-a-store" | "no-item-hash";
+
 /**
- * Fetch a single STORE message by its item_hash. Returns the message's
- * inner content (only the bits the reconstructor needs) or null when the
- * hash never existed (404), when the STORE is FORGOTten (a 200 with
- * `status: "forgotten"` and its content stripped — NOT a 404), or when the
- * message exists but isn't a STORE. Throws on transient transport / parse
- * failures so callers can differentiate "deleted" from "unreachable."
+ * The distinguishable outcomes of resolving a STORE message by item_hash.
+ * Mirrors `StoreLookup` in `apps/backend/src/services/aleph-replay.ts` — this
+ * package is a standalone zero-backend recovery tool and cannot import from
+ * the backend workspace, so the shape is duplicated deliberately.
+ *
+ * `forgotten` and `absent` are kept distinct because the recovery report tells
+ * a user, in a disaster, whether their bytes are gone. "Forgotten" is a
+ * definitive statement; a 404 is the CCN not having the message, which is not
+ * the same claim and must not be reported as one.
+ */
+export type StoreLookup =
+  | { kind: "resolved"; itemHash: string }
+  | { kind: "forgotten" }
+  | { kind: "absent"; reason: StoreAbsentReason };
+
+/**
+ * Fetch a single STORE message by its item_hash and classify the outcome.
+ * Throws on transient transport / parse failures so callers can differentiate
+ * "gone" from "unreachable."
+ *
+ * A FORGOTten STORE is a 200 with `status: "forgotten"` and its content
+ * stripped — NOT a 404 (verified live 2026-07-30, Decision #310). So a 404
+ * means "the CCN has no such message", never "the bytes were forgotten".
  *
  * The single-message endpoint (`/api/v0/messages/<hash>`) wraps the message
  * under a `message` key — `{status, item_hash, message: {type, content,
  * ...}}` — unlike the list endpoint (`/api/v0/messages.json`, see
  * `fetchAllMessages` above) which returns flat `{type, content}` objects
- * per message. Verified live 2026-07-30 (Decision #310). No flat-shape
- * fallback.
+ * per message. No flat-shape fallback.
  */
 export async function fetchStoreMessage(
   apiUrl: string,
   itemHash: string,
-): Promise<{ content: { item_hash: string } } | null> {
+): Promise<StoreLookup> {
   const url = `${apiUrl}/api/v0/messages/${itemHash}`;
   const res = await fetch(url);
-  if (res.status === 404) return null;
+  if (res.status === 404) return { kind: "absent", reason: "not-found" };
   if (!res.ok) {
     throw new Error(
       `fetchStoreMessage ${itemHash}: HTTP ${res.status} ${res.statusText}`,
@@ -85,9 +104,11 @@ export async function fetchStoreMessage(
     status?: string;
     message?: { type?: string; content?: { item_hash?: string } };
   };
-  if (body.status === "forgotten") return null;
-  if (body.message?.type !== "STORE" || !body.message.content?.item_hash) {
-    return null;
+  if (body.status === "forgotten") return { kind: "forgotten" };
+  if (body.message?.type !== "STORE") {
+    return { kind: "absent", reason: "not-a-store" };
   }
-  return { content: { item_hash: body.message.content.item_hash } };
+  const contentItemHash = body.message.content?.item_hash;
+  if (!contentItemHash) return { kind: "absent", reason: "no-item-hash" };
+  return { kind: "resolved", itemHash: contentItemHash };
 }

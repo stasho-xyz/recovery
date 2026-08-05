@@ -69,10 +69,10 @@ describe("fetchStoreMessage single-message endpoint shape", () => {
       },
     });
     const result = await fetchStoreMessage("https://ccn.test", "store_hash");
-    expect(result).toEqual({ content: { item_hash: "bafyabc" } });
+    expect(result).toEqual({ kind: "resolved", itemHash: "bafyabc" });
   });
 
-  it("returns null for the OLD (flat, wrong) shape — regression guard", async () => {
+  it("does not resolve the OLD (flat, wrong) shape — regression guard", async () => {
     // The shape this function used to assume. It never matched production
     // reality, so it must NOT resolve — pins that the flat-shape read is
     // gone for good (no flat fallback, Decision #310).
@@ -82,18 +82,24 @@ describe("fetchStoreMessage single-message endpoint shape", () => {
       content: { item_hash: "bafyabc", item_type: "ipfs" },
     });
     const result = await fetchStoreMessage("https://ccn.test", "store_hash");
-    expect(result).toBeNull();
+    expect(result).toEqual({ kind: "absent", reason: "not-a-store" });
   });
 
-  it("returns null on 404 (hash never existed)", async () => {
+  it("classifies a 404 as absent/not-found, NOT as forgotten", async () => {
+    // The conflation this split exists to prevent: a 404 means the CCN has no
+    // such message. Under the live-verified vendor behavior below, a genuinely
+    // forgotten STORE is a 200 — so a 404 is never the forgotten case, and
+    // reporting one as "forgotten" tells a user their bytes are gone when
+    // nothing established that.
     stubFetchJson({ message: "Not Found" }, 404);
     const result = await fetchStoreMessage("https://ccn.test", "never_existed");
-    expect(result).toBeNull();
+    expect(result).toEqual({ kind: "absent", reason: "not-found" });
   });
 
-  it("returns null on a forgotten STORE (200 + status forgotten, not 404)", async () => {
+  it("classifies a forgotten STORE (200 + status forgotten, not 404) as forgotten", async () => {
     // A FORGOTten STORE returns HTTP 200 with status "forgotten" and its
-    // content stripped — never a 404 (verified live 2026-07-30).
+    // content stripped — never a 404 (verified live 2026-07-30). This is the
+    // ONLY outcome that may claim the bytes are gone.
     stubFetchJson({
       status: "forgotten",
       item_hash: "forgotten_hash",
@@ -105,17 +111,37 @@ describe("fetchStoreMessage single-message endpoint shape", () => {
       forgotten_by: ["some_forget_item_hash"],
     });
     const result = await fetchStoreMessage("https://ccn.test", "forgotten_hash");
-    expect(result).toBeNull();
+    expect(result).toEqual({ kind: "forgotten" });
   });
 
-  it("returns null when the message exists but is not a STORE", async () => {
+  it("classifies a non-STORE message as absent/not-a-store", async () => {
     stubFetchJson({
       status: "processed",
       item_hash: "post_hash",
       message: { type: "POST", content: {} },
     });
     const result = await fetchStoreMessage("https://ccn.test", "post_hash");
-    expect(result).toBeNull();
+    expect(result).toEqual({ kind: "absent", reason: "not-a-store" });
+  });
+
+  it("classifies a STORE with no content.item_hash as absent/no-item-hash", async () => {
+    stubFetchJson({
+      status: "processed",
+      item_hash: "store_hash",
+      message: { type: "STORE", content: { item_type: "ipfs" } },
+    });
+    const result = await fetchStoreMessage("https://ccn.test", "store_hash");
+    expect(result).toEqual({ kind: "absent", reason: "no-item-hash" });
+  });
+
+  it("classifies a STORE with an empty content.item_hash as absent", async () => {
+    stubFetchJson({
+      status: "processed",
+      item_hash: "store_hash",
+      message: { type: "STORE", content: { item_hash: "" } },
+    });
+    const result = await fetchStoreMessage("https://ccn.test", "store_hash");
+    expect(result).toEqual({ kind: "absent", reason: "no-item-hash" });
   });
 
   it("throws on non-404 transport errors", async () => {
