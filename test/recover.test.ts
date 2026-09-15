@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { encrypt as eciesEncrypt, PrivateKey } from "eciesjs";
 import { Wallet, keccak256, getBytes } from "ethers";
 import { reconstruct } from "../src/reconstruct.js";
+import { groupAmendChains } from "../src/amend-chain.js";
 import {
   deriveEncryptionKey,
   decryptBlobAsEncryption,
@@ -246,6 +247,42 @@ describe("reconstruct — amend chains", () => {
     // resolved chains must reflect the number of distinct creation posts,
     // not the total post count.
     expect(result.stats.amendChainsResolved).toBe(1);
+  });
+
+  it("ignores an owner-signed amend whose inner deploymentId names a different deployment than the creation it refs", () => {
+    const owner = "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A";
+    const post = (item_hash: string, content: AlephMessage["content"]): AlephMessage => ({
+      type: "POST",
+      channel: "STASHO_CHANNEL_V1",
+      sender: owner,
+      signature: "0x",
+      item_hash,
+      content,
+    });
+    const creationA = post("creation_a", {
+      address: owner,
+      type: "aleph-cloud-deployment",
+      content: { deploymentId: "deploy_a", public: { status: "queued" } },
+      time: 1000,
+    });
+    const creationB = post("creation_b", {
+      address: owner,
+      type: "aleph-cloud-deployment",
+      content: { deploymentId: "deploy_b", public: { status: "queued" } },
+      time: 1001,
+    });
+    // Refs A's creation but carries B's deploymentId: belongs to neither chain.
+    const crossAmend = post("cross_amend", {
+      address: owner,
+      type: "amend",
+      ref: "creation_a",
+      content: { deploymentId: "deploy_b", public: { status: "live" } },
+      time: 2000,
+    });
+
+    const groups = groupAmendChains([creationA, creationB, crossAmend]);
+    expect(groups.get("deploy_a")?.item_hash).toBe("creation_a");
+    expect(groups.get("deploy_b")?.item_hash).toBe("creation_b");
   });
 });
 

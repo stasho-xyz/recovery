@@ -40,11 +40,15 @@ export function groupAmendChains(
     // anyone can publish a POST with `ref` pointing at our creation hash, but
     // an amend signed for a different address is not authoritative. Without
     // this check a foreign wallet could hijack a deployment's terminal state.
+    // The amend's own inner `deploymentId` must also name this chain — a
+    // trusted amend that refs another deployment's creation is not part of it.
     // Bound the walk by total post count to guard against cycles in malformed data.
     for (let i = 0; i < posts.length + 1; i++) {
       const ownerAddr = current.content.address.toLowerCase();
       const children = (childrenOf.get(current.item_hash) ?? []).filter(
-        (c) => c.content.address.toLowerCase() === ownerAddr,
+        (c) =>
+          c.content.address.toLowerCase() === ownerAddr &&
+          (c.content.content as { deploymentId?: string }).deploymentId === deploymentId,
       );
       if (children.length === 0) break;
       children.sort((a, b) => b.content.time - a.content.time);
