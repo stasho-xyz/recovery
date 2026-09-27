@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Standalone Aleph storage recovery script. Reconstructs project + deployment history from a wallet's signed Aleph messages without depending on the backend.",
+  "description": "Standalone Stasho recovery script. Reconstructs project + deployment history from a wallet's signed on-chain messages without depending on the backend.",
   "license": "MIT",
   "scripts": {
     "build": "tsc",

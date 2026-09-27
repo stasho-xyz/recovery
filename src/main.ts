@@ -70,8 +70,8 @@ Required:
   --output PATH    Path to write the recovery JSON
 
 Options:
-  --channel NAME   Aleph channel (default: ${DEFAULTS.channel})
-  --aleph-api URL  Aleph HTTP API URL (default: ${DEFAULTS.alephApi})
+  --channel NAME   Storage channel (default: ${DEFAULTS.channel})
+  --aleph-api URL  Network HTTP API URL (default: ${DEFAULTS.alephApi})
   --verbose        Print progress to stderr
   --stdin          Read USER_PRIVATE_KEY from stdin instead of env
   --help, -h       Print this help
@@ -86,7 +86,7 @@ Exit codes:
   10  Private key not provided
   11  Private key is not 32 bytes of hex
   12  Derived address does not match --address
-  20  Aleph API unreachable
+  20  Network API unreachable
   99  Unexpected error
 `,
   );
@@ -154,7 +154,7 @@ async function main(): Promise<void> {
     posts = fetched.posts;
   } catch (err) {
     process.stderr.write(
-      `error: Aleph API unreachable at ${args.alephApi}: ${(err as Error).message}\n`,
+      `error: network API unreachable at ${args.alephApi}: ${(err as Error).message}\n`,
     );
     process.exit(EXIT.ALEPH_API_UNREACHABLE);
   }

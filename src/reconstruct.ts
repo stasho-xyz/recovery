@@ -154,7 +154,7 @@ export async function reconstruct(
             code: "STORE_FORGOTTEN",
             detail:
               `Deployment ${inner.deploymentId}: STORE ${storeRef} was ` +
-              "FORGOTten on Aleph (bytes are gone)",
+              "FORGOTten on the network (bytes are gone)",
             messageHash: leaf.item_hash,
           });
         } else if (store.kind === "removed") {
@@ -163,7 +163,7 @@ export async function reconstruct(
             code: "STORE_REMOVED",
             detail:
               `Deployment ${inner.deploymentId}: STORE ${storeRef} was ` +
-              "REMOVED by Aleph's garbage collection, not by a FORGET " +
+              "REMOVED by the network's garbage collection, not by a FORGET " +
               "(bytes are gone)",
             messageHash: leaf.item_hash,
           });

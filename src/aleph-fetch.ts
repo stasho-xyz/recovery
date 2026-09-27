@@ -41,7 +41,7 @@ export async function fetchAllMessages(
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(
-        `Aleph fetch failed (${messageType}, page ${page}): ${res.status} ${res.statusText}`,
+        `Message fetch failed (${messageType}, page ${page}): ${res.status} ${res.statusText}`,
       );
     }
     const body = (await res.json()) as { messages?: AlephMessage[] };
