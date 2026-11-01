@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { writeFileSync } from "node:fs";
 import { Wallet } from "ethers";
 import { fetchAllMessages } from "./aleph-fetch.js";
 import { orchestrate } from "./orchestrate.js";
 import { reconstruct } from "./reconstruct.js";
+import { writeRecoveryFile } from "./write-output.js";
 import type { MessageFetcher, RecoveryOutput } from "./types.js";
 
 interface CliArgs {
@@ -63,7 +63,11 @@ function parseArgs(argv: string[]): CliArgs {
 
 function printUsage(): void {
   process.stderr.write(
-    `Usage: USER_PRIVATE_KEY=0x... npm run recover -- --address 0x... --output ./out.json [options]
+    `Usage: npm run recover -- --address 0x... --output ./out.json [options]
+
+Read the key so it stays out of your shell history and your later commands:
+  ( printf 'Wallet key: '; read -rs USER_PRIVATE_KEY; echo; export USER_PRIVATE_KEY
+    npm run recover -- --address 0x... --output ./out.json )
 
 Required:
   --address ADDR   Ethereum address whose data to recover
@@ -183,7 +187,7 @@ async function main(): Promise<void> {
     warnings: result.warnings,
   };
 
-  writeFileSync(args.output, JSON.stringify(output, null, 2) + "\n");
+  writeRecoveryFile(args.output, JSON.stringify(output, null, 2) + "\n");
 
   process.stderr.write(
     `[recover] Wrote ${result.projects.length} projects, ${result.stats.deploymentsRecovered} deployments, ${result.warnings.length} warnings to ${args.output}\n`,
