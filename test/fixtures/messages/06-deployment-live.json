@@ -1,0 +1,121 @@
+{
+  "description": "Project + creation + live amend → expected status=live",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x8399148c9f9a97e299965ea2132f1c06b8c870ee27b2f3339d0475b42f6be338209ec42080a4a6db5adb687310eebfd97ff88e1744f383f936481ae3ac2c65ed1b",
+      "item_hash": "23696b91baf2222a5ac51e49ec549a88595a269c5887c96cccd30b2233f3d6bb",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_001": {
+            "id": "proj_001",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "j/U3azvYCWX7uS7AuFVREI048ECR/7zEuPKY8/G9jCJ0KTIBakmycv/riLo4lZHssWLh/dwMCpiyNNDj+Ees9XnvfT38Dp6Kc9DAYboUZuN8paAS11WwCTfiB15XlWKa3D4tPaRjWqREPJ1sU/GWg2klx5gEjdWGyD4eYzcmaNO4BrTao7TweQ7E5rTK7QcOdw==",
+              "iv": "YMp+3HK5ju34tnXl",
+              "tag": "wi5RBvDFtx3Yf7gW2mb5dw==",
+              "deks": {
+                "user": "BBvvaVQ+kWxYD2F5ktfqnYXepL83C/XjMsu4f2XxUiL8XNRaDbJPD09fCywXNJPNRO0YCNRxY6hJVwQYf2LdjdPBDzCk68eUD2b723Q1ApAdQRrSijmPbKjlRsjZXFsw4d2yCD9sAyBRqEPf0HQHKm9qzlnjzvHv+EyIFh50R+ym",
+                "backend": "BMryCu8VFsCqiFU8oHfQldWukoEJD76zgD03AAV2BkAaLh9Tr5h3MJg0ewb5oRqVGxi+SgInsqTqGuB2iXpnRzMziPQHv5HK7GzkH1w0cnj/t48QKzzGUYYW05s3LMufjbS32d9WSo+AlVkY1vi49GgfDPw76Xum1UYGeQkWawQj"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0xdc7d27ba2e82c76cc7451455786a0740beef6555a5119f60d28ecd4b4c78cf683bfe2c19751acd07f5dbfc5271ccd9fc498ed170b08ad6b2b1103ee79df8e6fb1c",
+      "item_hash": "5c3651ea2036489aad3866900a8159d55ee69307585e15b1636708ac3241cb10",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "aleph-cloud-deployment",
+        "content": {
+          "deploymentId": "deploy_001",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "queued",
+            "cid": null,
+            "url": null,
+            "tokenHash": "aabbcc",
+            "createdAt": "2026-04-09T00:30:00.000Z",
+            "finishedAt": null
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "V93djB8x6Mw1rquZYUTQOjSZgHPdp+Fk7V/TobF1lwmt4CrX8dJmP1VUxX5Vt1MbcqN4P9oK/bpu/pO9x+bEghfs3AbBBHE9ZoAQz6uj2eYnju5uzmzyroDvFr5A528QaLkVmUcUIw==",
+            "iv": "Jo9M+JAviOO6XgU8",
+            "tag": "wyGWUR2pRdOK+2q0RysJcw==",
+            "deks": {
+              "user": "BNhNzJUOXEcJZS5SsH3+RvZp/VfQqSOPa4DYw6OBwnMZnP1Oy0WnMby1+QF6gmZi+dtX21UP6pZTUtlA09Lm6cDihVfC47mvNuwkVTtA1PhSsTVUieaQNbTWoskkmupzHHs3TVEiOHpaNhzRlCvptc+g2vz8LR3J4P0XHrC/9mha",
+              "backend": "BE7ZNBcCatmuCKmEDpUDwFKPKs4/7SlDnLS/pF46C7aYmsJ06km2Sr7RpuUWnLyP8m7wetysI6ukp3+vdawBnfZuqDYGn7Fi2xgbdLBPEUIfuCmMQhL30785PwSg83LQD4XlxKgQawN8jfFgZ4EWwJ1P7pPCPn3nrlsVX7IqfDPI"
+            }
+          }
+        },
+        "time": 1712622600
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0x234a5988037084a6321379bd9efcacefb1390128d7150a22736dffd70210fc5f01580ea3e698756a770124770297fc9b2b9057f85d13540fabf60b1c81911a7d1c",
+      "item_hash": "76abe746ee9383591b02edd66d2c5c0059e00dd107db77f16ff63328452a7869",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "amend",
+        "ref": "5c3651ea2036489aad3866900a8159d55ee69307585e15b1636708ac3241cb10",
+        "content": {
+          "deploymentId": "deploy_001",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "live",
+            "cid": "bafybeiglive",
+            "url": "https://bafybeiglive.ipfs.aleph.sh",
+            "tokenHash": "aabbcc",
+            "createdAt": "2026-04-09T00:30:00.000Z",
+            "finishedAt": "2026-04-09T00:33:00.000Z"
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "eKOcnr7J/Q6IorstLa5vPnrFXn/EgiAnxcAD+RAIubxJJ92JmIQS8IDgoKg1OQLpVascV2KaS+eMdxLKqGeKMK5F0qphuh+sybW+f2Btq6QSawNMw0UDK+B3xZOHyUlZWxR0SLGPpfKXdgsdSlB08GpnD3TvDYeDFSawUT33MxfM0rz7x9d640JxTbrD72YBqHY=",
+            "iv": "PkpNk3g0n6LkDawo",
+            "tag": "/CMLyiqh1ZFKfKfmtqR37w==",
+            "deks": {
+              "user": "BLd4GMj4MpFllbw74SLdtn+6zfcpH7A062ISxdtwIgBKOt9Zhv6oDbBCv9ex5Yfi1nPE4LzGTJFzB3N1Wha1KHsWSKVBCQy4m8a7V9H0brdT2cyPh8RrpSL5ffMbtbvEsukvMF/xTjCDXkD3R99KuPyvvN87nSEbL6Wnfs/KHbYo",
+              "backend": "BObUeJE8haiDiLidO3fjpJNe9sgWRZQzdoaNQo+rHWqIxHAu0cjFYATrxsbfNHmlZdEvKcTyQFs9GSCFUHsk0b9x5qi+J0CXqGH1vCLdNYONze6fzFkC4SpUmVJJ/83Ht8H8a3KM3jCi311meQew/Qd0pks25ed88BbenpklJFeA"
+            }
+          }
+        },
+        "time": 1712622780
+      }
+    }
+  ]
+}

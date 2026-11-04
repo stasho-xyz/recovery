@@ -1,0 +1,48 @@
+{
+  "description": "One AGGREGATE with a tampered ciphertext byte → replay skips it",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x7fed8f1442bc6184e3b6e130aea06a5b87362d79d3f8680682808a2de4bd495e3037391451d458eb4df2e0fab65b57fd6adaa36896e36ab5b3cf3d3ee89100821b",
+      "item_hash": "5540153923c2560020e35a6f646608189287dc0255dc617b1fa8569db69c3a47",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_tamper": {
+            "id": "proj_tamper",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "DBf5pxTICZQK4pgvMPgUBraF8X25QpBDGcXUa3Qin/x7qTIe7qwOVWvUm/ZqALfRQekDV+dpLCdNoSFyPhPeqyWG/dV5F1UBwUhfHrSwgbqUQ/WauRM3Ux6i2BE91pZqaunc/IAqzrNwOP6bbOk+bLgi/VSPyKqnyrXiwBpaFA/yB/x455B7",
+              "iv": "07eLMoSmqZB1wyza",
+              "tag": "hWMxKtuADW2Twk/JsM5NRA==",
+              "deks": {
+                "user": "BEOwXGTJrkXBXX3y87D+q0thBNUdlz5yHG+4VR1ZiGNt8pHiL/u3Zjzez83IhZg46bVnbhuy3BwOqsbCHfi6vCKLs0xcpp3btGnclfS05x+u/HXC4JpHQHD8gcfYD2KEgAaf2q/oFxcpq2gosX7tO7I5hTmftqnm7YMKJsp/6AXK",
+                "backend": "BKYvS7GS+T06MFsEIshwQNhZ1IS5yGPvN8higZOlHNbcl+Vt1dajmOcQDitlirIVmjXiNFUlDo5uig1TeQXvpPx1uSmETc7kJAMhXdc3Ows0UJ2tXAHnzN63QzhcCTU38VWL0o7j0uqPza2lB+3b34/5AbQppyZf4JlpYNCa9BTT"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    }
+  ]
+}

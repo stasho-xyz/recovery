@@ -1,0 +1,232 @@
+{
+  "description": "Deep amend chain (1 creation + 4 amends); leaf wins",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x6c4eca6d534f0a619341e711edb0152609bcda3b0c0b840ca2c261033994746a53d48303bca31dd72cfc45de713aa0797e9b19be83b55f592434dfc3c60b8c9d1b",
+      "item_hash": "7aa6c31a737adaeb112c94a85cd1c1f991b29b2a307e5f98a9cdfe766ca84260",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_001": {
+            "id": "proj_001",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "ZHYgmobkqsJWb0NWoGREj+im2196v+bYXtW6q6UyRg0AASMJtPzE4So8U2DmuQ62VotMd8hV5ahbSO4eSntkv+DEIF4cQw0MgMqnM3S5bGoBWZmpqd2O88J2SyA4z0Xv3K9WOgHiCgxtP5KxSWHNjqMfqDZpvGydeYJJMm9cSeYLG+/3B2PguO/BckMn7AbUCA==",
+              "iv": "wtlXhsudmhUjTXks",
+              "tag": "N8B5dMt7QRetGC5B0qfGYQ==",
+              "deks": {
+                "user": "BAjeuchUzWlAbDzTkd4B3JQNxqCKRAvkf2vUbaI5R8zzAkEiCtPcGpw/Sjz8Kxj4sJaTP4I7zdPLtboAgKoD3bChsR7b+FYeqQt8A//alXFd7nbvEp/YOQwoPMbNbFjZoSpBckwGR2AqW3w3geNl6uyaSc087u3jGhO4mbrnSMPh",
+                "backend": "BHGkSiEdj3SRjFID8MRVHjuQIGNJB1pBJP4jNsfL21wGqyshVqn3Y+W/Wd6V1Lukae9AiePGGuak2XsR2L4ZZ5Iaqi7i50g7WXf6SyDosIhRm149KEB4IErdf8gHmMkj+RptD5Pt4qKbPHYkV0i2gPmZ4yNSGHcSSnU2sIjpf5Ql"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0xcc1c0b23e084231fc6cae40b2a1fc4a66f7063fe2c562180c737a6948d437db642a0383294d341b64d227a5fccfe62b3ffc3135900cfdaa43bedb801f666906a1c",
+      "item_hash": "ce652e696e247212359bedd4d4c5c4ed8735a8b59c85fa49b216b77fa68036d2",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "aleph-cloud-deployment",
+        "content": {
+          "deploymentId": "deploy_003",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "queued",
+            "cid": null,
+            "url": null,
+            "tokenHash": "112233",
+            "createdAt": "2026-04-09T02:00:00.000Z",
+            "finishedAt": null
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "vW0R1XFHJRtYd+PYIIdkgfKjkmvcvm76E6B2dC2JdpnjkZQFENLUPDtvImSnSbB2pAPOdLykekuosJ0YvCNhnAGufxEA/yjlU7PDTi6AVApzkB1DBEmM8rjq+6qF0oHfSq8=",
+            "iv": "PzB4StOvRG61OzKj",
+            "tag": "39WKL5CII6fUMmWjTpuH6A==",
+            "deks": {
+              "user": "BJwspKEROZf2yle0fsAQtVazJCxOSu53NSv6JSBVpixk8Clpyeu5HCsRYQ4SyFsyZZEPKUx2DRjerRXNp1/fVnN7k5i5vq4ANI8b/3hv5felSGK2cAKcX8qIh533gR93G/dI/UBgzS+VqL3tL70Eq70nD7mfLmQTX/D1UKTbgU+p",
+              "backend": "BKgfno0uuRwnc7dU0B6UUjb0Inq5ipebpKBEDyZNuWwBdPoSKjr7yOM5yqx0gfB7Z6BZ1KRCWM5u8m06UOGBqE4WRJaJwF4N0M2ynvWJYYPYpRlbd2oEHQOIF+3dmJuHZEziuVIeHfoc99B9JDd9wNkqQcWi8LwtIFWrq8Vl0QU6"
+            }
+          }
+        },
+        "time": 1712628000
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0x41f00788906b07b1fd36541c4494e01e7e72bab93d6fa9c0bc2680836d11cf0a004c55409c72f66733de084fc6a6692917531300e9a966897e7d40974150b3c11b",
+      "item_hash": "cb59a6c82a2f8750f2ad0dd1c393451769a76b5e4935bf2df5acbab65a729154",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "amend",
+        "ref": "ce652e696e247212359bedd4d4c5c4ed8735a8b59c85fa49b216b77fa68036d2",
+        "content": {
+          "deploymentId": "deploy_003",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "installing",
+            "cid": null,
+            "url": null,
+            "tokenHash": "112233",
+            "createdAt": "2026-04-09T02:00:00.000Z",
+            "finishedAt": null
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "v16wIn7v3b+JBoChg3dQ8+SStLnG4TRdSyhResZnWpZfQ4CsGifvDEVuSFZ4uEmBk/rYNo5gD3SPEf2xgYfkHDG2z6qzSOy6CRL/Th1GFj/YD8HHE9+UE9J53Z9wIRkF1pw=",
+            "iv": "YaJ2PMzQFojptuKC",
+            "tag": "zwTxZOOegZ940DbVIUXiUw==",
+            "deks": {
+              "user": "BGdZX5iQWZFqGwf5S4Ip420HGAN263UHsl+AXceOtTsytAd8yQMad4OuYPOy3lyj44vy5/Bz9ugDHynN85FFp7bkImimXr+UgGg/w768Y6g83WNp0QqdCBet6IeEkeDPaCgIebNY4XlUbYbAGAsJOxTS04qFSdMBYm3Z28kTzXik",
+              "backend": "BN8y5m0b4LZHQqgnIfyGt+gQdPccIITYe72Dl1R4AvJ+QkotrqhMtIA4+/rNliI+E48POnOfZEE+gv1ETAhrxP+tK3dwroZeXNQ9Mr/U0FNZIWm6Io9/h5BMVfPOSyYGjH4qmRIUF0GV2kZ+ufhTCIckIxB8+FsRIfS7SlVX0Hcg"
+            }
+          }
+        },
+        "time": 1712628060
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0x2ff2481ca15118fe25b9ba030d647a48458f5dc601bb4f2b20fe0583ef96ee0a0f32afec8b2794a4b20a8cab1ea803085800fa3d6684c0aaa744f11c9a7a4d871c",
+      "item_hash": "d55eb77ed5154c5376a8d42e5a1fb0ad5f9dedd7682d5fc44b3c9cdcb2a14de0",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "amend",
+        "ref": "ce652e696e247212359bedd4d4c5c4ed8735a8b59c85fa49b216b77fa68036d2",
+        "content": {
+          "deploymentId": "deploy_003",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "building",
+            "cid": null,
+            "url": null,
+            "tokenHash": "112233",
+            "createdAt": "2026-04-09T02:00:00.000Z",
+            "finishedAt": null
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "o8QqFAVMJjm0Eaakcg8Povw/Zh/PKiXxxG09aC0MyvoKiyOMcYBcLZgbL3WrXpFFORWLN4kTNXJRx6mukmKKqRGvn79JB6kXKC7gZi9H4YBM+5jy6nVmv+P74EdNsc0A0l4=",
+            "iv": "fU7RetnVGlN6lhya",
+            "tag": "4P7lTxingIST+f+gpzmc+A==",
+            "deks": {
+              "user": "BNvHf7kXn94mcvxHts6l2gCQ3PRoxpNUiy/zcyr+qCzmbDlAFspbuy8DG7wFs367StXtwyTHeNxUwZgfkkWD0wyym1y/060YzGEYMsUdCXJ2iniaWoidI84WLfn5VDJolLoIk0WigaMITVMdlsRZvBSkefLeY1lQ3RTOm5mJ/puA",
+              "backend": "BNqnQqUkNQGSrt+ABsyni27nVdUudm+FO2mR5jN18TO2jbdI5L2yxYmrB4Hdm1xjcs9ctbhQ+u5Wqq+gxwjFgDNvXF32RwGhezuBZaLQB+k4l6V/ZSiwW+WdvIUgmjWgMdZuwCUxFr7Es9+I989KWtetM3YlINZTflBQBKGZ54Hq"
+            }
+          }
+        },
+        "time": 1712628120
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0xd2aecda616992ee7ad4d6fa7d5e591739fe2bea21c47f2e29edaf7c35fc947cd304af9a575abe237c6a3dc6543bf739e729f46c9046242c94e317cb9201821381b",
+      "item_hash": "dd584fdf483aa7d4cb4a346e4c3caa0f7903d0e3cae7c66d768a5b6254e149cf",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "amend",
+        "ref": "ce652e696e247212359bedd4d4c5c4ed8735a8b59c85fa49b216b77fa68036d2",
+        "content": {
+          "deploymentId": "deploy_003",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "uploading",
+            "cid": null,
+            "url": null,
+            "tokenHash": "112233",
+            "createdAt": "2026-04-09T02:00:00.000Z",
+            "finishedAt": null
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "f4UrUpa4vXahwOQ5aNqKY/WrqrvQZCoZneh64O/9cVRwrVFx7NUcGWsxVrec+gyZEu8Bgw66PPiJ4jPn2ncALGz5so8ZFhjiCZFo7adjBLNhy3J5lMMkqwkXeGDzk9xPfWg=",
+            "iv": "VxqESAZ1eQbMWl14",
+            "tag": "/tDEOt6oZ4NpNDdhPxaNLg==",
+            "deks": {
+              "user": "BH/7qbj70wBBitJC1A/5YWnT1HiIN1K12TmLKjI+TVNJFPDbl6b1w03TrcCu+nOQ5hfPiZJprW6gY9xfw8OYY08qSYiMKoAEBwUJ8X4gFQjiE0RycsMHu0CFT19+TgSdZPRcq/wneaJOjIQtYb6I7cLCLhVJm3mnb9CwSbygXhnj",
+              "backend": "BG6ZUIy89vSFgBDHLJQ0RN0BF14os2EMXRWUe9Z/GduMnehME9lcpTkOwGFq+ZoIkjPPa1jlRZInZKemMQOsFlJ5VamEeLG5VgXLG+G2pjDMtk+zPWBCTnQ2EEY1yBRR4ezu2oQgai8N/BLXmSY1bBSvQRYgMQfQGQ+ddiMpNmJi"
+            }
+          }
+        },
+        "time": 1712628180
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0x62bd65d139b0386939097160044fa3ff4e0137215c3a165eaf8b802a338d12f92d8fb6d894e208ed265f6f9bd512f87922cefba359fca73cab14c6294ee4ee611c",
+      "item_hash": "4786acf771593a84ec797c6000071be1752a509bed632295de663e14e85eb045",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "amend",
+        "ref": "ce652e696e247212359bedd4d4c5c4ed8735a8b59c85fa49b216b77fa68036d2",
+        "content": {
+          "deploymentId": "deploy_003",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "live",
+            "cid": "bafybeigchain",
+            "url": "https://bafybeigchain.ipfs.aleph.sh",
+            "tokenHash": "112233",
+            "createdAt": "2026-04-09T02:00:00.000Z",
+            "finishedAt": "2026-04-09T02:05:00.000Z"
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "nDiBxnHZX3KlC5zgpYxcaXtPxKSXUJhmR6rDLcTtf0n5VO60jcL6viNc4ts+t4hn/edHzhnfU90/sqtXC9toHZZYJ98iagx2DOiSURuA0ztUaMgYHFZFf4DNsGw3XozfaF4IpdrCKaYacs4cj/IkRnl47NhRn76c79taymgwuZvNLxhZQHncJnecIwm3",
+            "iv": "TIspId6lrCZBgqyD",
+            "tag": "dIVblozGpjQ+RY4u7NlIzQ==",
+            "deks": {
+              "user": "BCWUyAfSzTstaLt4CPh93L4MVVUl7z6zKQ7Q2Krf+N6I0J2IUlAStyzF5E9TXKbH6YohPEhSyoqwtSvYuii8+ZeVBEvrzCxrnW185POUJvTjt1oHDV1SyuAWzzb2puw4USSqDLt6M1fCO07uEwm00+beo6Sbr2nBHbHg3QEtyq1N",
+              "backend": "BJvYyS37S8PMhFC9Vs7Lwn7eTkJ3LjiPd3PQp8U5Pvnxxk19Oo0ZpznxJ7H0MEI3osLwU/n3KbHP1phab5g6SGZRiUKPcv4/VLktgFACMrDjGViFt4xZul9Q34v9iWyH+O+GaOaFlUKZAtKr1iGy4nBBrOqrKprf0iFh3YpstM5A"
+            }
+          }
+        },
+        "time": 1712628240
+      }
+    }
+  ]
+}

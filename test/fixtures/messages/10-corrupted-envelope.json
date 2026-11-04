@@ -1,0 +1,42 @@
+{
+  "description": "One AGGREGATE with a malformed encrypted envelope (wrong shape) → replay skips it",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x2593c9cd9db2979038a3121d1bb2c7fe0dd10e47a544ac56d564e38de4dc0aa15e3ceda1ee3405c8111360fb108b494bb5cfee6ecd5f550ad1ebf852f345146f1b",
+      "item_hash": "50e6f8417be4214fc71db22b3066537160244184a18e26ed2b9ce1e4f96c7206",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_bad": {
+            "id": "proj_bad",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 1,
+              "alg": "aes-256-gcm",
+              "ct": "Y29ycnVwdA=="
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    }
+  ]
+}

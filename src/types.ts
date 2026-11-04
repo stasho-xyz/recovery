@@ -1,3 +1,5 @@
+export const DEFAULT_CHANNEL = "STASHO_CHANNEL_V1";
+
 export interface EncryptedEnvelope {
   /**
    * Envelope format version. Current backend writes `v: 3`. Older records on
@@ -29,9 +31,11 @@ export interface EncryptedEnvelope {
 export interface AlephMessage {
   type: "AGGREGATE" | "POST";
   channel: string;
+  chain: string;
   sender: string;
   signature: string;
   item_hash: string;
+  item_content?: string;
   content: {
     address: string;
     key?: string;
@@ -52,12 +56,41 @@ export interface RecoveredProject {
   framework: string;
   buildCommand: string;
   outputDir: string;
+  rootDir: string;
+  envVars: RecoveredEnvVar[];
+  workflowFilename: string | null;
   deployTarget: "ipfs" | "instance";
   createdAt: string;
   updatedAt: string;
   pendingWorkflowPrUrl: string | null;
   pendingWorkflowPrNumber: number | null;
+  customDomains: string[];
+  defaultSubdomain: string | null;
+  currentDeploymentId: string | null;
+  currentDeploymentSetAt: string | null;
+  serving: ServingDeployment;
   deployments: RecoveredDeployment[];
+}
+
+export interface RecoveredEnvVar {
+  key: string;
+  value: string;
+}
+
+export interface ServingDeployment {
+  deploymentId: string | null;
+  reason: "pinned" | "newest-live" | "pin-superseded" | "pin-missing" | "none";
+}
+
+export interface DeletedProject {
+  id: string;
+  deletedAt: string;
+  deployments: RecoveredDeployment[];
+}
+
+export interface RecoveredEncryptionKey {
+  pubkey: string;
+  scheme: string;
 }
 
 export interface RecoveredDeployment {
@@ -70,12 +103,18 @@ export interface RecoveredDeployment {
    */
   storeRef: string | null;
   cid: string | null;
+  bundleHash: string | null;
+  /** From the STORE message's `item_type`; null when the STORE was not resolved. */
+  artifactKind: "ipfs" | "storage" | null;
   /**
    * Outcome of resolving `storeRef`. Distinguishes the ways a CID can fail to
    * come back, because this report is what a user reads in a disaster to learn
    * whether their artifact bytes still exist:
    *
    *   - `"resolved"`    — `cid` is populated; the artifact is retrievable.
+   *   - `"content-match"` — the STORE was FORGOTten, but another processed STORE
+   *     still pins the same CID, so `cid` is populated and the bytes may be
+   *     retrievable.
    *   - `"forgotten"`   — the STORE was definitively FORGOTten on Aleph
    *     (typically because the project was deleted). The deployment metadata
    *     is preserved here for audit, but the bytes are unrecoverable through
@@ -98,6 +137,7 @@ export interface RecoveredDeployment {
    */
   storeStatus:
     | "resolved"
+    | "content-match"
     | "forgotten"
     | "removed"
     | "absent"
@@ -129,18 +169,25 @@ export interface RecoveryStats {
   projectsRecovered: number;
   deploymentsRecovered: number;
   decryptionFailures: number;
+  malformedRecords: number;
+  untrustedMessages: number;
+  truncatedQueries: number;
+  storeFetchFailures: number;
+  deletedProjects: number;
   warnings: number;
 }
 
 export interface RecoveryOutput {
-  $schema: string;
-  schemaVersion: 3;
+  schemaVersion: 4;
   wallet: string;
   recoveredAt: string;
   alephApiUrl: string;
   channel: string;
+  complete: boolean;
+  encryptionKey: RecoveredEncryptionKey | null;
   stats: RecoveryStats;
   projects: RecoveredProject[];
+  deletedProjects: DeletedProject[];
   warnings: RecoveryWarning[];
 }
 
@@ -153,4 +200,17 @@ export interface RecoveryOutput {
 export type MessageFetcher = (args: {
   messageType: "AGGREGATE" | "POST";
   addresses: readonly string[];
-}) => Promise<AlephMessage[]>;
+}) => Promise<FetchResult>;
+
+export interface FetchOptions {
+  contentTypes?: readonly string[];
+  aggregateKeys?: readonly string[];
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+  retries?: number;
+}
+
+export interface FetchResult {
+  messages: AlephMessage[];
+  truncated: { fetched: number; total: number } | null;
+}

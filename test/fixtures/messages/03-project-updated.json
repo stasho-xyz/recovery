@@ -1,0 +1,84 @@
+{
+  "description": "Create project, then update it (name + buildCommand)",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x93a85c9190afa2c1631fb615b93b5c43ce52828f098c01c5fe6c9eb0c4dc32ff1bd0f5bffceeac7f27b6f497055e4dc267037a1cc8e28e8c136e8066762c464d1c",
+      "item_hash": "75dc193affeca89acbf0eb8e66179463223ab63b898ab1e083cfd967c830165a",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_001": {
+            "id": "proj_001",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "DxYqSiFobO9XtU+aSgz4Dl8WyhgEMpNlFJrwrBaHIkAmNm+mht8fJhOZ/AqDOVK2c1dBObiBVldulL/jtQgN8cBcyuWiwj/3T/0GyxrynddGWdpk9QIluuTjQwNw0QgBIxeOpae88GYMgT814tB+joBeAH5LOeW/UDIEOgfzuS8Jze0YUESG5oimrvwgz2wydg==",
+              "iv": "LopBEDcpwYTv2Flg",
+              "tag": "xoDW/nC/88u1kRKPkJ0N8Q==",
+              "deks": {
+                "user": "BNicjd15kaqcs3RgqqVC+dbLXpDMb7wFiO6x86qtqhjZw8wPZ4oRZnlsI1rhfjKwZT0RN7XDQmqqYpPX6tRs4I8uOS0jFcGNCfwEG0QTzCMQn3viPgTAcqOguZ2w8zT3AsdIpJiFT/M+Hte5q/CwrYYnV6DIyBRbM/EDJhX6vvIp",
+                "backend": "BO0WYAOyaY3ZMa9EnNkMgTdF2mcbkDi9rFLPkEX09QEiNEtPMiZk/uKqJHiO2NSDtgEjc9ckfHlRR5uc5R2GSjt0FuY6/2ginkaJW/U/vggw0xbYoBvVj1VBm1NjJV8/qrgEYChVlQIIRLfg3mvU8lXiZhIG230JDz89Nbl3uIxp"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    },
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0xb35e5fe2c4f6acb9082cda52f0a616121d6d9c82a06f5def2de2f00c09faba8c0173e7ba764c0f32984ecf4a978160b23eaae6560b57559491fcb9bbca805d111c",
+      "item_hash": "a4caff597cd390788868cd8c146aa813023efa29766b5803de2a2bbe1ab5569d",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_001": {
+            "id": "proj_001",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T01:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "HIQOB0pqnk1Rx7iNfGUyawwSvMYrckgCBYv9U+VJxZCmxdfdFIeMxgtHwK+IkQwHmUJs7rtgCyXRN8ALO+2isoANjwftd9+LGJx1hExxAqmloOUe+EYCZxcdY1b+ur5xmRyTplAK2YxwbKo+uRZZKMLjlxnD8rRQ38NtcsKuLOw0GerKg9qxGcjfoyjH3vjIihpp3j6M0t8E7CRQ8as=",
+              "iv": "cr/DoYMVwrhKPHOW",
+              "tag": "tC/gjFs+3sOCNy5dhDsvzA==",
+              "deks": {
+                "user": "BAv2CpHihKKbwiE/ndo0meZ0uBJYgDIkxMmgk25JQx8tbsboXErbNQxLwupgxoIhksFIa8lle1CE/R48RZbSb01SNs+EKZ9uhreosPl7aJkdt2Fzs2IDN2P5tx63MkNjd6hhNC6C3suBZRonyHqEw9iGUft1CSoTf5fcBv5MFXew",
+                "backend": "BMJyhihjb7Hcb+krsAhxRipzx2tffppae1bJVtz2hQWRqjV4MEXSC9Zwd600Mvjv6+XrFcogro0SH7qJzPECY074BS5nkKRhSCM0xEyWUSvHs0JRTOMSOs/8yQHZSRAB6XDPBvYq2C2QCYnXccupc1F+EYFfBmSicTA1BMW+GMxy"
+              }
+            }
+          }
+        },
+        "time": 1712624400
+      }
+    }
+  ]
+}

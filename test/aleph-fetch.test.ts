@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchAllMessages, fetchStoreMessage } from "../src/aleph-fetch.js";
+import {
+  cidFromGatewayUrl,
+  fetchAllMessages,
+  fetchStoreMessage,
+  fetchWithRetry,
+  findProcessedStoreByContentHash,
+} from "../src/aleph-fetch.js";
 
 const LOWER = "0x89668b401cd9ae7664af2647dcab0b069c459354";
 const CHECK = "0x89668B401Cd9Ae7664AF2647DcAB0b069C459354";
@@ -69,7 +75,17 @@ describe("fetchStoreMessage single-message endpoint shape", () => {
       },
     });
     const result = await fetchStoreMessage("https://ccn.test", "store_hash");
-    expect(result).toEqual({ kind: "resolved", itemHash: "bafyabc" });
+    expect(result).toEqual({ kind: "resolved", itemHash: "bafyabc", itemType: "ipfs" });
+  });
+
+  it("carries itemType storage on a resolved STORE", async () => {
+    stubFetchJson({
+      status: "processed",
+      item_hash: "store_hash",
+      message: { type: "STORE", content: { item_hash: "abc123", item_type: "storage" } },
+    });
+    const result = await fetchStoreMessage("https://ccn.test", "store_hash");
+    expect(result).toEqual({ kind: "resolved", itemHash: "abc123", itemType: "storage" });
   });
 
   it("does not resolve the OLD (flat, wrong) shape — regression guard", async () => {
@@ -157,7 +173,7 @@ describe("fetchStoreMessage single-message endpoint shape", () => {
       reason: "credit_insufficient",
     });
     const result = await fetchStoreMessage("https://ccn.test", "removing_hash");
-    expect(result).toEqual({ kind: "resolved", itemHash: "bafyremoving" });
+    expect(result).toEqual({ kind: "resolved", itemHash: "bafyremoving", itemType: "" });
   });
 
   it("classifies a rejected message as absent even when it carries a content CID", async () => {
@@ -233,5 +249,244 @@ describe("fetchStoreMessage single-message endpoint shape", () => {
     await expect(
       fetchStoreMessage("https://ccn.test", "anything"),
     ).rejects.toThrow();
+  });
+});
+
+// ─── Batching, paging and truncation ─────────────────────────────────────────
+
+function msg(n: number): { item_hash: string } {
+  return { item_hash: `h${n}` };
+}
+
+function addrs(n: number): string[] {
+  return Array.from({ length: n }, (_, i) => `0x${i.toString(16).padStart(40, "0")}`);
+}
+
+function jsonFetch(
+  handler: (url: URL) => unknown,
+): { fetchImpl: typeof fetch; urls: URL[] } {
+  const urls: URL[] = [];
+  const fetchImpl = (async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    urls.push(url);
+    return new Response(JSON.stringify(handler(url)), { status: 200 });
+  }) as typeof fetch;
+  return { fetchImpl, urls };
+}
+
+describe("fetchAllMessages batching and truncation", () => {
+  it("batches 250 addresses into 3 requests and dedups by item_hash", async () => {
+    const { fetchImpl, urls } = jsonFetch((url) => {
+      const n = url.searchParams.get("addresses")!.split(",").length;
+      return { messages: [msg(n), msg(0)] };
+    });
+    const result = await fetchAllMessages("https://ccn.test", "CH", addrs(250), "POST", {
+      fetchImpl,
+    });
+    expect(urls.map((u) => u.searchParams.get("addresses")!.split(",").length)).toEqual([
+      100, 100, 50,
+    ]);
+    expect(result.messages.map((m) => m.item_hash).sort()).toEqual(["h0", "h100", "h50"]);
+    expect(result.truncated).toBeNull();
+  });
+
+  function cappedNode(total: number, pageCap: number, pages: number) {
+    return jsonFetch((url) => {
+      const page = Number(url.searchParams.get("page"));
+      const start = (page - 1) * pageCap;
+      const count = page > pages ? 0 : Math.min(pageCap, total - start);
+      // A real CCN reports (page-1) × pagination as the total on an empty page.
+      return {
+        messages: Array.from({ length: Math.max(count, 0) }, (_, i) => msg(start + i)),
+        pagination_total: count > 0 ? total : start,
+        pagination_per_page: pageCap,
+      };
+    });
+  }
+
+  it("is not truncated when a capped node's last page completes the total", async () => {
+    const { fetchImpl } = cappedNode(350, 100, 4);
+    const result = await fetchAllMessages("https://ccn.test", "CH", [CHECK], "POST", {
+      fetchImpl,
+    });
+    expect(result.messages).toHaveLength(350);
+    expect(result.truncated).toBeNull();
+  });
+
+  it("is truncated when a capped node stops short of the total", async () => {
+    const { fetchImpl } = cappedNode(350, 100, 3);
+    const result = await fetchAllMessages("https://ccn.test", "CH", [CHECK], "POST", {
+      fetchImpl,
+    });
+    expect(result.messages).toHaveLength(300);
+    expect(result.truncated).toEqual({ fetched: 300, total: 350 });
+  });
+
+  it("reports truncated null for an absent pagination_total and a short page", async () => {
+    const { fetchImpl } = jsonFetch(() => ({ messages: [msg(1)] }));
+    const result = await fetchAllMessages("https://ccn.test", "CH", [CHECK], "POST", {
+      fetchImpl,
+    });
+    expect(result.truncated).toBeNull();
+  });
+
+  it("stops at MAX_PAGES on full pages and reports truncated", async () => {
+    let calls = 0;
+    const { fetchImpl } = jsonFetch((url) => {
+      calls++;
+      const page = Number(url.searchParams.get("page"));
+      return {
+        messages: Array.from({ length: 200 }, (_, i) => msg(page * 1000 + i)),
+      };
+    });
+    const result = await fetchAllMessages("https://ccn.test", "CH", [CHECK], "POST", {
+      fetchImpl,
+    });
+    expect(calls).toBe(500);
+    expect(result.truncated).toEqual({ fetched: 100_000, total: 100_000 });
+  });
+
+  it("drops non-object elements of the messages array", async () => {
+    const { fetchImpl } = jsonFetch(() => ({ messages: [null, 7, "x", [1], msg(1)] }));
+    const result = await fetchAllMessages("https://ccn.test", "CH", [CHECK], "POST", {
+      fetchImpl,
+    });
+    expect(result.messages.map((m) => m.item_hash)).toEqual(["h1"]);
+  });
+
+  it("sends contentTypes and aggregateKeys comma-joined, with pagination=200", async () => {
+    const { fetchImpl, urls } = jsonFetch(() => ({ messages: [] }));
+    await fetchAllMessages("https://ccn.test", "CH", [CHECK], "POST", {
+      fetchImpl,
+      contentTypes: ["aleph-cloud-deployment", "amend"],
+      aggregateKeys: ["projects", "security"],
+    });
+    const raw = urls[0]!.search;
+    expect(raw).toContain("contentTypes=aleph-cloud-deployment%2Camend");
+    expect(raw).toContain("aggregateKeys=projects%2Csecurity");
+    expect(raw).toContain("pagination=200");
+  });
+
+  it("throws on a non-OK page", async () => {
+    const fetchImpl = (async () => new Response("no", { status: 400 })) as typeof fetch;
+    await expect(
+      fetchAllMessages("https://ccn.test", "CH", [CHECK], "POST", { fetchImpl }),
+    ).rejects.toThrow(/400/);
+  });
+});
+
+describe("fetchWithRetry", () => {
+  const fast = { timeoutMs: 1000, retries: 3 };
+
+  it("retries a 503 then a thrown fetch and returns the third 200", async () => {
+    const outcomes: Array<() => Response> = [
+      () => new Response("x", { status: 503 }),
+      () => {
+        throw new Error("socket hang up");
+      },
+      () => new Response("ok", { status: 200 }),
+    ];
+    let i = 0;
+    const fetchImpl = (async () => outcomes[i++]!()) as typeof fetch;
+    const res = await fetchWithRetry("https://ccn.test/x", { ...fast, fetchImpl });
+    expect(res.status).toBe(200);
+    expect(i).toBe(3);
+  });
+
+  it("gives up after retries with the last error", async () => {
+    let i = 0;
+    const fetchImpl = (async () => {
+      i++;
+      throw new Error(`boom ${i}`);
+    }) as typeof fetch;
+    await expect(
+      fetchWithRetry("https://ccn.test/x", { timeoutMs: 1000, retries: 2, fetchImpl }),
+    ).rejects.toThrow("boom 2");
+    expect(i).toBe(2);
+  });
+
+  it("returns the last 5xx response when retries run out", async () => {
+    const fetchImpl = (async () => new Response("x", { status: 502 })) as typeof fetch;
+    const res = await fetchWithRetry("https://ccn.test/x", {
+      timeoutMs: 1000,
+      retries: 2,
+      fetchImpl,
+    });
+    expect(res.status).toBe(502);
+  });
+
+  it("does not retry a 400", async () => {
+    let i = 0;
+    const fetchImpl = (async () => {
+      i++;
+      return new Response("bad", { status: 400 });
+    }) as typeof fetch;
+    const res = await fetchWithRetry("https://ccn.test/x", { ...fast, fetchImpl });
+    expect(res.status).toBe(400);
+    expect(i).toBe(1);
+  });
+
+  it("aborts a request that never resolves after timeoutMs", async () => {
+    const fetchImpl = ((_input: unknown, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      })) as typeof fetch;
+    await expect(
+      fetchWithRetry("https://ccn.test/x", { timeoutMs: 20, retries: 1, fetchImpl }),
+    ).rejects.toThrow("aborted");
+  });
+});
+
+describe("findProcessedStoreByContentHash", () => {
+  it("returns the item_hash of the STORE whose content pins the hash", async () => {
+    const { fetchImpl, urls } = jsonFetch(() => ({
+      messages: [
+        { item_hash: "post1", type: "POST", content: { item_hash: "bafy1" } },
+        { item_hash: "store1", type: "STORE", content: { item_hash: "bafy0" } },
+        { item_hash: "store2", type: "STORE", content: { item_hash: "bafy1" } },
+      ],
+    }));
+    const found = await findProcessedStoreByContentHash("https://ccn.test", "CH", "bafy1", {
+      fetchImpl,
+    });
+    expect(found).toBe("store2");
+    expect(urls[0]!.search).toBe(
+      "?channels=CH&msgTypes=STORE&contentHashes=bafy1&pagination=50",
+    );
+  });
+
+  it("returns null for an empty list and for no matching STORE", async () => {
+    const empty = jsonFetch(() => ({ messages: [] }));
+    expect(
+      await findProcessedStoreByContentHash("https://ccn.test", "CH", "bafy1", {
+        fetchImpl: empty.fetchImpl,
+      }),
+    ).toBeNull();
+    const other = jsonFetch(() => ({
+      messages: [{ item_hash: "s", type: "STORE", content: { item_hash: "bafy9" } }],
+    }));
+    expect(
+      await findProcessedStoreByContentHash("https://ccn.test", "CH", "bafy1", {
+        fetchImpl: other.fetchImpl,
+      }),
+    ).toBeNull();
+  });
+
+  it("throws on a non-OK response", async () => {
+    const fetchImpl = (async () => new Response("no", { status: 400 })) as typeof fetch;
+    await expect(
+      findProcessedStoreByContentHash("https://ccn.test", "CH", "bafy1", { fetchImpl }),
+    ).rejects.toThrow(/400/);
+  });
+});
+
+describe("cidFromGatewayUrl", () => {
+  it("extracts the CID from an Aleph IPFS gateway URL", () => {
+    expect(cidFromGatewayUrl("https://bafybeid3xa.ipfs.aleph.sh")).toBe("bafybeid3xa");
+  });
+
+  it("returns null for other hosts and null", () => {
+    expect(cidFromGatewayUrl("https://x.apps.stasho.xyz")).toBeNull();
+    expect(cidFromGatewayUrl(null)).toBeNull();
   });
 });

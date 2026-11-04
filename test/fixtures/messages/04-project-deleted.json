@@ -1,0 +1,84 @@
+{
+  "description": "Create + update + tombstone → expected 0 projects",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x1218f472df9820b7ff163abd155d89dc510ef69d9d2e27c2b3e4f1d5ee52dbe3270ee6e8237b4007e3209ad50cafbc99c7dc4f968e115c09fd91811b5e7d3c551c",
+      "item_hash": "39f476691b7442d08caab30641257eac148abd1d53de7d63957af35fcc478340",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_doom": {
+            "id": "proj_doom",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "none",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "q6b0ExP0dBiRvu8UUj7WYrRjwGitN2aNQVdIqvb603U/TVqNjh8CH5ta98N14Cf3iQGIocDzAbxoFZgoPYdDNh7dU9KaosDlpCfu+T8ZxS8bNe0SwYaSvlchg9KxghA4yXton5qsJM1UstB0idZAIyUVxDRx",
+              "iv": "XmsmwsjDHRxg9j6a",
+              "tag": "2qTdZ/spSOb1Kz5T2+JmGw==",
+              "deks": {
+                "user": "BH6eGgd/URlx+peBkuqRi7ylbEONkTB0GhU2E4NusOPe+tA/Yk/zBuoi8m2/bCyqqsI9lSJ5wink45LVXZj52Y64ZDNx47gzpoVzFG5CAGiu/aepsx+A7Mjbd7KyiELJYXFP2iKYVIQoVxtpopeNGlYzlGYaVA40BxM0d+KCkdVr",
+                "backend": "BMV6/JHF3McICk0jG0dl3HvozeiJuydGlW0qQBI+McAuKgCd8l0LVRQwqaPUk6oWpz3PNyDATlGJInquYSlv0g7n0C7bkvsqe70VtObjcV73NvV9hwfa4dfcom7WUWNQsFQLLArCTHqMTpTgBwMeSYhDPvfYh4fVB1g/C6uTjI2G"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    },
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x90d9946faa4a17e0a2a42be569ac3f34b9a57546b73208b5bcd50f1808b302f162c85a98488bb6fd56afdc504c2014ac523b0bb553712b2ec7a29c9a084414bc1c",
+      "item_hash": "054a71d94dbaf10b16f50880383500870386349455c14fea7fa8fe91724ec8f1",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_doom": {
+            "id": "proj_doom",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "none",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:10:00.000Z",
+              "deleted": true
+            },
+            "encrypted": {
+              "v": 1,
+              "alg": "aes-256-gcm",
+              "ct": "",
+              "iv": "",
+              "tag": "",
+              "deks": {
+                "user": "",
+                "backend": ""
+              }
+            }
+          }
+        },
+        "time": 1712621400
+      }
+    }
+  ]
+}

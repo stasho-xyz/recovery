@@ -1,4 +1,5 @@
-import type { AlephMessage, MessageFetcher } from "./types.js";
+import { filterTrusted } from "./trust.js";
+import type { AlephMessage, MessageFetcher, RecoveryWarning } from "./types.js";
 
 export interface OrchestrateDeps {
   fetcher: MessageFetcher;
@@ -7,6 +8,10 @@ export interface OrchestrateDeps {
 export interface OrchestrateResult {
   aggregates: AlephMessage[];
   posts: AlephMessage[];
+  warnings: RecoveryWarning[];
+  untrustedMessages: number;
+  otherWalletMessages: number;
+  truncatedQueries: number;
 }
 
 /**
@@ -21,12 +26,21 @@ export interface OrchestrateResult {
  * `parseAuthorizationsTimeline` handles legacy form via `utils.computeAddress`;
  * recovery is intentionally simpler since the channel hard-cut retired all
  * V0 data. If V0 recovery is ever revived, port that derivation back here.
+ *
+ * Only security aggregates signed by the wallet count: the wallet-signed
+ * security aggregate is the trust root (`apps/agent/src/aleph.ts:180-186`).
  */
 export function extractAuthorizedSenders(
   aggregates: readonly AlephMessage[],
+  walletAddress: string,
 ): Set<string> {
   const securityAggs = aggregates
-    .filter((m) => m.type === "AGGREGATE" && m.content.key === "security")
+    .filter(
+      (m) =>
+        m.type === "AGGREGATE" &&
+        m.content.key === "security" &&
+        m.sender.toLowerCase() === walletAddress.toLowerCase(),
+    )
     .slice()
     .sort((a, b) => (a.content.time ?? 0) - (b.content.time ?? 0));
 
@@ -50,7 +64,10 @@ export function extractAuthorizedSenders(
  *   - Query A: messages where sender == wallet (security AGGREGATEs + legacy
  *     wallet-signed data).
  *   - Query B: messages where sender ∈ ever-authorized union (delegate +
- *     session keys), filtered client-side by content.address == wallet.
+ *     session keys).
+ *
+ * Both queries pass through `filterTrusted` (hash binding, signature, and
+ * content.address == wallet) before anything else reads them.
  *
  * Merge + dedup by item_hash. Returns {aggregates, posts} ready to hand to
  * `reconstruct`.
@@ -63,50 +80,105 @@ export async function orchestrate(
   deps: OrchestrateDeps,
   walletAddress: string,
 ): Promise<OrchestrateResult> {
-  // Query A: wallet-signed messages.
-  const aggA = await deps.fetcher({
-    messageType: "AGGREGATE",
-    addresses: [walletAddress],
-  });
-  const postA = await deps.fetcher({
-    messageType: "POST",
-    addresses: [walletAddress],
-  });
+  const warnings: RecoveryWarning[] = [];
+  const truncationWarnings: RecoveryWarning[] = [];
+  const walletLc = walletAddress.toLowerCase();
+  let otherWalletMessages = 0;
+  const trust = (
+    messages: AlephMessage[],
+    allowedSenders: ReadonlySet<string>,
+  ): AlephMessage[] => {
+    const result = filterTrusted(messages, walletAddress);
+    warnings.push(...result.warnings);
+    otherWalletMessages += result.otherWalletMessages;
+    const kept: AlephMessage[] = [];
+    for (const m of result.trusted) {
+      if (allowedSenders.has(m.sender.toLowerCase())) {
+        kept.push(m);
+        continue;
+      }
+      warnings.push({
+        code: "UNTRUSTED_MESSAGE",
+        detail: `${m.item_hash}: sender is not authorized`,
+        messageHash: m.item_hash,
+      });
+    }
+    return kept;
+  };
+
+  const fetchMessages = async (
+    messageType: "AGGREGATE" | "POST",
+    addresses: readonly string[],
+  ): Promise<AlephMessage[]> => {
+    const { messages, truncated } = await deps.fetcher({ messageType, addresses });
+    if (truncated) {
+      truncationWarnings.push({
+        code: "ALEPH_MESSAGES_TRUNCATED",
+        detail:
+          `${messageType} query for ${addresses.length} addresses: ` +
+          `fetched ${truncated.fetched} of ${truncated.total}`,
+      });
+    }
+    return messages;
+  };
+
+  // Query A: wallet-signed messages; only the wallet may sign them.
+  const walletOnly = new Set([walletLc]);
+  const aggA = trust(
+    await fetchMessages("AGGREGATE", [walletAddress]),
+    walletOnly,
+  );
+  const postA = trust(
+    await fetchMessages("POST", [walletAddress]),
+    walletOnly,
+  );
 
   // Extract ever-authorized union from Query A's security AGGREGATEs.
-  const authorized = extractAuthorizedSenders(aggA);
-  authorized.delete(walletAddress.toLowerCase()); // wallet is Query A's job
+  const authorized = extractAuthorizedSenders(aggA, walletAddress);
+  authorized.delete(walletLc); // wallet is Query A's job
 
   // Query B: messages signed by anyone else the user has ever authorized.
   let aggB: AlephMessage[] = [];
   let postB: AlephMessage[] = [];
   if (authorized.size > 0) {
     const addrs = [...authorized];
-    aggB = await deps.fetcher({ messageType: "AGGREGATE", addresses: addrs });
-    postB = await deps.fetcher({ messageType: "POST", addresses: addrs });
+    const allowedB = new Set([...authorized, walletLc]);
+    aggB = trust(await fetchMessages("AGGREGATE", addrs), allowedB);
+    postB = trust(await fetchMessages("POST", addrs), allowedB);
   }
 
-  const walletLc = walletAddress.toLowerCase();
-  const matchesWallet = (m: AlephMessage): boolean =>
-    m.content.address.toLowerCase() === walletLc;
-
-  // Merge + dedup by item_hash. Query B filtered to content.address == wallet
-  // because an authorized address can write on behalf of multiple users in
-  // principle.
+  // Merge + dedup by item_hash.
   const seen = new Set<string>();
   const aggregates: AlephMessage[] = [];
   const posts: AlephMessage[] = [];
 
-  for (const m of [...aggA, ...aggB.filter(matchesWallet)]) {
+  for (const m of [...aggA, ...aggB]) {
     if (seen.has(m.item_hash)) continue;
     seen.add(m.item_hash);
     aggregates.push(m);
   }
-  for (const m of [...postA, ...postB.filter(matchesWallet)]) {
+  for (const m of [...postA, ...postB]) {
     if (seen.has(m.item_hash)) continue;
     seen.add(m.item_hash);
     posts.push(m);
   }
 
-  return { aggregates, posts };
+  const distinctWarnings: RecoveryWarning[] = [];
+  const warnedHashes = new Set<string>();
+  for (const w of warnings) {
+    if (w.messageHash !== undefined) {
+      if (warnedHashes.has(w.messageHash)) continue;
+      warnedHashes.add(w.messageHash);
+    }
+    distinctWarnings.push(w);
+  }
+
+  return {
+    aggregates,
+    posts,
+    warnings: [...distinctWarnings, ...truncationWarnings],
+    untrustedMessages: distinctWarnings.length,
+    otherWalletMessages,
+    truncatedQueries: truncationWarnings.length,
+  };
 }

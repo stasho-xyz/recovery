@@ -1,4 +1,4 @@
-import { decrypt as eciesDecrypt } from "eciesjs";
+import { decrypt as eciesDecrypt, PrivateKey } from "eciesjs";
 import { createDecipheriv } from "node:crypto";
 import { Wallet, keccak256, getBytes } from "ethers";
 import type { EncryptedEnvelope } from "./types.js";
@@ -97,4 +97,53 @@ export function decryptBlobAsEncryption(
     decipher.final(),
   ]);
   return JSON.parse(plaintext.toString("utf8")) as Record<string, unknown>;
+}
+
+/** The uncompressed `0x04…` secp256k1 public key of an encryption private key. */
+export function encryptionPubkeyOf(encryptionPrivKey: Buffer): string {
+  const pub = new PrivateKey(encryptionPrivKey).publicKey.uncompressed;
+  return "0x" + Buffer.from(pub).toString("hex");
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function bundleEnvelopeProblem(envelope: unknown): string | null {
+  if (typeof envelope !== "object" || envelope === null || Array.isArray(envelope)) {
+    return "not a JSON object";
+  }
+  const e = envelope as Record<string, unknown>;
+  if (e["v"] !== 1) return "v is not 1";
+  if (e["kind"] !== "stasho-bundle") return "kind is not stasho-bundle";
+  if (e["alg"] !== "aes-256-gcm") return "alg is not aes-256-gcm";
+  for (const field of ["ct", "iv", "tag"]) {
+    if (!isString(e[field])) return `${field} is missing`;
+  }
+  const deks = e["deks"];
+  if (typeof deks !== "object" || deks === null) return "deks is missing";
+  if (!isString((deks as Record<string, unknown>)["encryption"])) {
+    return "deks.encryption is missing";
+  }
+  return null;
+}
+
+/**
+ * Decrypt a `stasho-bundle` envelope through its `deks.encryption` recipient.
+ *
+ * The backend builds the envelope in `apps/backend/tests/bundle-encrypt-script.test.ts:38-58`
+ * (AES key ECIES-wrapped to the uncompressed encryption pubkey). Returns the raw
+ * plaintext bytes; they are never parsed. Throws on a malformed envelope, a wrong
+ * key or an auth tag mismatch.
+ */
+export function decryptBundle(envelope: unknown, encryptionPrivKey: Buffer): Buffer {
+  const problem = bundleEnvelopeProblem(envelope);
+  if (problem !== null) throw new Error(`not a stasho-bundle envelope: ${problem}`);
+  const e = envelope as { ct: string; iv: string; tag: string; deks: { encryption: string } };
+  const dek = Buffer.from(
+    eciesDecrypt(encryptionPrivKey, Buffer.from(e.deks.encryption, "base64")),
+  );
+  const decipher = createDecipheriv("aes-256-gcm", dek, Buffer.from(e.iv, "base64"));
+  decipher.setAuthTag(Buffer.from(e.tag, "base64"));
+  return Buffer.concat([decipher.update(Buffer.from(e.ct, "base64")), decipher.final()]);
 }

@@ -1,0 +1,35 @@
+{
+  "projects": [
+    {
+      "id": "proj_001",
+      "name": "my-app",
+      "source": "github",
+      "repo": "acme/my-app",
+      "branch": "main",
+      "installationId": 12345,
+      "framework": "nextjs-static",
+      "buildCommand": "npm run build",
+      "outputDir": "dist",
+      "deployTarget": "ipfs",
+      "createdAt": "2026-04-09T00:00:00.000Z",
+      "updatedAt": "2026-04-09T00:00:00.000Z"
+    }
+  ],
+  "deployments": [
+    {
+      "id": "deploy_003",
+      "projectId": "proj_001",
+      "status": "live",
+      "cid": "bafybeigchain",
+      "url": "https://bafybeigchain.ipfs.aleph.sh",
+      "tokenHash": "112233",
+      "commit": "123abc",
+      "commitMessage": "Chain test",
+      "branch": "main",
+      "actionsRunUrl": "https://github.com/acme/my-app/actions/runs/3",
+      "error": null,
+      "createdAt": "2026-04-09T02:00:00.000Z",
+      "finishedAt": "2026-04-09T02:05:00.000Z"
+    }
+  ]
+}

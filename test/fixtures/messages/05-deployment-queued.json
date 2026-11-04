@@ -1,0 +1,84 @@
+{
+  "description": "Project + single queued deployment (creation POST only)",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x6da21fdabbe340db6b7bd58d411ee11e436c47f35f4426b9f1418b32cf3e92aa3f49760bbf7b7086b15d7a9b0686c38a33723087bb7dda30306e067f7ff506bf1c",
+      "item_hash": "7da7f7b2bda9d45081b3b06e29a41e30cd4dc2031b355db38544af19c4c0b5c1",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_001": {
+            "id": "proj_001",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "2dgicBegtvLbYEomWta+d1lsnbAQAnpgL+v/e73+bayTcwrA1cURyMTxPbfC6EAwBeSW8mpdgThAZkplYsV7KGQZ57o4j1RlVXA+6wqeB14MCk8iAZ4V327Y6ie9mZObcjUk9Mwcc8F2O23Ob5ulS65L5pAyqRElH3hF7+m/ginx3RqpyaRxVqXA3hbwCwlkCw==",
+              "iv": "AD0B7yP9JoYkIo3W",
+              "tag": "7E6eGFWa8Ev+elozG2gjHA==",
+              "deks": {
+                "user": "BIiBy03wJ3XUZmTh6j+M23Ykpr57SPHmfpD0Plu1A8zGy/KRbkNtSIvNYrK7zfuz2RATVXGjqykKBT9XSIL7rzq6MRBH9eyI0Y7NI796ReNsVTctLjloTdiqtvpBvIN6KPqYCOwfDTUycnbOCs+QfV+sESHLIGaV4rn3M3s/kzfN",
+                "backend": "BA6MJOn/82mDerpGtQ+/WJcBNXcI4FDzAYP174iQcCP+3b+Vry9iEinrFBPjbx1W98CkvcJhqPGT9sI2jLPW7+ohAqAw2u0iOFxKd4Tahl2x7ve3NYYNeaCN3nyBfefbZ/2cR9PO1kOhwTtrgej2PkfRe+muQEC7D/1EFca9TC3r"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0xb188af3cc5c96f3095abab2dd23ef77e2b250cb4ba99efb13bddf3ecb0b6128779e1d74f9f567aeba4fa35e9ba2c2f5d4371825ebe9dcf2b6740d5ef58f62e981c",
+      "item_hash": "a280bf61045c19ae64494836b87ffbaf39a3e34fb0096ad47d09c4769aadf232",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "aleph-cloud-deployment",
+        "content": {
+          "deploymentId": "deploy_001",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "queued",
+            "cid": null,
+            "url": null,
+            "tokenHash": "aabbcc",
+            "createdAt": "2026-04-09T00:30:00.000Z",
+            "finishedAt": null
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "2raTYiTbWtNr/p/mOwbGpkVe2j2QnflSVKyVZ/WA830ZcBfKo8MXfETXB1F2Bn9JF6GHzf7fJiWJLTToOh3fik6itNLqSzYL1eSX8/I47tate83bn3maalBvzd6OuMiwmJcmRHl50g==",
+            "iv": "4wRHSE4KCmX+8oWd",
+            "tag": "HqfygPbjHyfQSr6kU8OhEQ==",
+            "deks": {
+              "user": "BDK7lyC7JId0KAU0xUAygrYUlhTalM7xea30nLpy7CLjAioryWFvZWTOOWlo4LbP3jjZlCPJPl9KkSw0AauKA5zbI/8N+GCGNndtQlVHHP+5TeeKb7XYYkJq+4kO80Z2YWYdjKLJlWAV+yFjTj/qQs6krm3lk6JabmGFiZwU19WO",
+              "backend": "BD950TvA5NwP6tqfmnr6SFlUyYo02dqq49AgB5wSPiZtUBXkgQmuN3GSMYPn3hyE0mgH6obYrTtdRbRsHWp0zUEvO8b+S1SPmE61Y/+EGYb0fH79U7HP0uD+Y0FB7poE/U2v4pdmb+IbCZAUwrXA4HHMFGSptUc7sgTQhM65vcdZ"
+            }
+          }
+        },
+        "time": 1712622600
+      }
+    }
+  ]
+}

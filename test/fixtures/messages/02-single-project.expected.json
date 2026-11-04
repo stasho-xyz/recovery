@@ -1,0 +1,19 @@
+{
+  "projects": [
+    {
+      "id": "proj_001",
+      "name": "my-app",
+      "source": "github",
+      "repo": "acme/my-app",
+      "branch": "main",
+      "installationId": 12345,
+      "framework": "nextjs-static",
+      "buildCommand": "npm run build",
+      "outputDir": "dist",
+      "deployTarget": "ipfs",
+      "createdAt": "2026-04-09T00:00:00.000Z",
+      "updatedAt": "2026-04-09T00:00:00.000Z"
+    }
+  ],
+  "deployments": []
+}

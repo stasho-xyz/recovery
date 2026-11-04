@@ -1,0 +1,48 @@
+{
+  "description": "Single project, no deployments",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x4f3262261cbaf81a9ce36555557f0b66c7d91e357d70bd48caa8d99885f5dccd3ace49e030d84ce0391c6f470e9e856ce17149023f95a2d36774268161f53c221c",
+      "item_hash": "172c8a650d63182e3da966cb7b9596ce370e6fc26dc45ba1690d42241adcbb04",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_001": {
+            "id": "proj_001",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "F8c3kCsb8SizKVu5bHfOzeDPaFNe2ekszmHEURWI1fUP/Pc3yq7gu6ixYmOPb/w0SKUBQaAAToq2IjK+oUagidI4WEAyoBOiavfN2o4nCBdj3/HXJ3e1eobJN+yhPJJFIkFzWIQ43GMnGt0IgiGtxkoTBelcwXX+b161rV6y37SOOo4UtkwiwG8v6QOLK6WQRA==",
+              "iv": "a9BNvjXePoSq/fNm",
+              "tag": "woneuucCEURYRxpK2RYgNA==",
+              "deks": {
+                "user": "BBWAzhtil3l70SEbK/m4v5eXKiG6mMexDSIriUjYmBCBit3zW9gQx2dtG17Lc5oplQuLMTWnTXSgUzYHqc4FFPC3DrLRSZGGHGpdaA3EIpUk442ZaLaom4lOfddtblzbGkiDS5MrFxQlIedxylCGpBp7CiA2a0l0q2NQ/I5aP2Dg",
+                "backend": "BK08Zgs9ViB4mZ0HBDCDxRi76lxurOeBEOSM3JsSrW9MJ+IdtIjVrXWvMQyHxm5De3nBRf/2rLTiDKtrFCBoERvBHOlBSVlYO/bfaEIUem6zy+ihX0povEsF56qHpKs4ViNIMeZX95/v3cjtGfMqNDKbIYdI3y/sj5nx2SzNcZyI"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    }
+  ]
+}

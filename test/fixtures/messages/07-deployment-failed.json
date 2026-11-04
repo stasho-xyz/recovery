@@ -1,0 +1,121 @@
+{
+  "description": "Project + creation + failed amend → expected status=failed with error",
+  "testKeys": {
+    "userPrivHex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "backendPrivHex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delegatePrivHex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "userAddress": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+    "delegateAddress": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB"
+  },
+  "messages": [
+    {
+      "type": "AGGREGATE",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "signature": "0x450394e680e9ddf41907fe7f585c0d3b5d0ef4c514a5eaba7720c4a3a68535c54ab24bb1fb50c6d0ddbf45817fb480cab89d0edd86a57f5b400d37d20e2e923e1b",
+      "item_hash": "8d27f34fb1bbbad0f17f2897ea44bae9162f970a5bb6b90119f896585a6146ea",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "key": "projects",
+        "content": {
+          "proj_001": {
+            "id": "proj_001",
+            "schemaVersion": 1,
+            "public": {
+              "framework": "nextjs-static",
+              "deployTarget": "ipfs",
+              "createdAt": "2026-04-09T00:00:00.000Z",
+              "updatedAt": "2026-04-09T00:00:00.000Z",
+              "deleted": false
+            },
+            "encrypted": {
+              "v": 2,
+              "alg": "aes-256-gcm",
+              "ct": "yB1sACVFejVeZUAygglvopBGWj5ws7A7EmY5afX+A4AZ9ISiqbATfp9KKpsbNezPTRwQTntVAg7kqtWWPF8yRgVd0Bcw2+ztl0EFaD/krDhqc9WNvUTBmhRFZVxq3IymZ5Y/9mCy7nCUftFnOEmcZXjnafaEjhxyZ0+dsT2ek6aRNz6m2c9NXRHpcCBb6X89lA==",
+              "iv": "R1ycWPXvf9qf6HHT",
+              "tag": "mMSobV40/nw54dTN6isqDA==",
+              "deks": {
+                "user": "BDg1Yk+WBhTrauwYPBFgWQXcBukC6beBUrWl8/2L7gYajShlY5jLIEwGsN01Qi8UHT8T1i9CuDx7qWb4i5YZSBb//CARZEnxrX4LTTKAFX1iR/M/geMANB/91nvtcSwroB1GYhewqXAeAfA5ukDBd0ureAa6vV65cmdwqYO28/4c",
+                "backend": "BDWBJctKVhKnmx07uZOOgc4FiACavd1IoaqG5i9+jlY9oRvfkYSrHPdrYnuGzZMQluHgC+IRHxdbLd5bjR7vkWp8siA2cOHw5sVkIEK0I2VYJwGRnqH1bjQT5ZskFe1eyICuZ3DM8R8ve+yxIeB7vTDGfbCS1X7RGcvnBQSgts3u"
+              }
+            }
+          }
+        },
+        "time": 1712620800
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0x11a0a528fc66e14a1165598bcb5cf27e74ea65dfbc87d90e4ccd083c10fb1ecc4bcd66e1c8001737123d5476eec62b7479f8f9a503ff52241f61e0a3e9a624bc1c",
+      "item_hash": "de5b2de1465da4864b1dd13fefd86f68d04121e25f4f44149e4e316e327cd293",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "aleph-cloud-deployment",
+        "content": {
+          "deploymentId": "deploy_002",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "queued",
+            "cid": null,
+            "url": null,
+            "tokenHash": "ddeeff",
+            "createdAt": "2026-04-09T01:00:00.000Z",
+            "finishedAt": null
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "9vK8/PwwwmoiLeAQS01vCyP0zxHlrSTNFja+E+PwXeJshTT7ysN2pVfQ5YlNOF/Q76db6DmzEJT5KBwjuH5wIXBpVVMZHfzVFuaAMlCRtR0eWvf7sOb8sAOqJK/u2Rq5Y/1WeNgNJHc=",
+            "iv": "LIF1RZlYttx3VhQw",
+            "tag": "rsbyqq+hQhSoIytqrM12dA==",
+            "deks": {
+              "user": "BDwt7JBJlKZj/EhSBO0e2uvUIv9lAwq4nOvuyNXuFsrvEqUCGA05y13CGTW/yVHErdZekL43IseloEDP2/YC0+5PALbH87oEBtJGhk1NVnuHrRwDXohnd0K9DbWO0tDrLxPlXdHQb/KbhFDq88WdYSKl/oLiUxdaW15ne/qWgbEU",
+              "backend": "BPJyiwN6QGUDynqtebbrig2AfVmH2jfqAmhddBAxUzWBEVoeB/qSUMBxc2Kh4WJKM9GT0a530bdg0u88qqd9lu6eVYbFghp3f0gzaMH5Xtz5/PRnFtALzfc1CJsZjVLbO/94ftBRI+1RE1wDysSrdcBdy0psIpmfYGdRpOakUp+K"
+            }
+          }
+        },
+        "time": 1712624400
+      }
+    },
+    {
+      "type": "POST",
+      "channel": "TEST-FIXTURES",
+      "sender": "0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB",
+      "signature": "0xe724f59650d787c25b0f63174999a9576a9f2f80b2855990bebd01e0a0c179a406a01bd9176419024e05f2c9ab609e765fc8390df5dfe905e0ceb831cf2d09521b",
+      "item_hash": "73a5a2e9ed079822ae7c9c629151b365a5f52f65e22bb7c843a41718e13df609",
+      "content": {
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "type": "amend",
+        "ref": "de5b2de1465da4864b1dd13fefd86f68d04121e25f4f44149e4e316e327cd293",
+        "content": {
+          "deploymentId": "deploy_002",
+          "projectId": "proj_001",
+          "schemaVersion": 4,
+          "public": {
+            "status": "failed",
+            "cid": null,
+            "url": null,
+            "tokenHash": "ddeeff",
+            "createdAt": "2026-04-09T01:00:00.000Z",
+            "finishedAt": "2026-04-09T01:02:00.000Z"
+          },
+          "encrypted": {
+            "v": 2,
+            "alg": "aes-256-gcm",
+            "ct": "lX+//zWBjroXKk1fMR+RG67GJu/Ot6AQ33cJArMX/FzFY7kPldHk/Y03o7edL5tZpkvTsrJauTUR7LryyufKy9t93vJJHSf/sJwJ6zHcNqzVRZAev6V2+i07gPl+qre67YYkhjbKJE7N5QDb5qnvFLh+er906+GHwaYv8rkqkzRmwCEh2N6diyeozjJsyz2euUbD0zzvQkws8KArU6PUz5DLAQ==",
+            "iv": "FMwSD6jDnN2qz51h",
+            "tag": "C2Ty6EfJEPISWqE8i155BQ==",
+            "deks": {
+              "user": "BNZwG48HVIP64DtsCyvwQlGSKjLonPhA8rG+IikjmIw+ZfSdeIxoOns9vsdVhnLblNjGVAx6fEyoxSEPzHEpDb/RcJiiUTk4c1T15tnOEGDdUosyxoiTj/RKVbz+KtkXphTPk1F48Rhc72VdSFMf5REcqMW3rzq4K5/HeaqJeMpk",
+              "backend": "BHZJt+YZ/Eci5SX65GNQMohR3I0EMZezkXtLnb1mpc3oKGDCfeRhgz2/Tgagsdw7GXpl+EDHT+FjEmwyXBm40zA6d1Kw13W4uGTrDAC47b9dsdLAkfqTdPyjerYyDMFK/T1VWHxbV4ss4tZtTu7nqjq12vCTjizGpK5JnINiJ9pd"
+            }
+          }
+        },
+        "time": 1712624520
+      }
+    }
+  ]
+}
