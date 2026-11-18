@@ -9,7 +9,7 @@ import { PrivateKey, encrypt as eciesEncrypt } from "eciesjs";
 import { deriveEncryptionKey, encryptionPubkeyOf } from "../src/decrypt.js";
 import { encryptForTest } from "./helpers/envelope.js";
 import { startStubCcn } from "./helpers/stub-ccn.js";
-import { DELEGATE, WALLET, signedMessage } from "./helpers/signed-message.js";
+import { DELEGATE, WALLET, exportLine, signedMessage } from "./helpers/signed-message.js";
 import type { AlephMessage, RecoveryOutput } from "../src/types.js";
 
 const packageRoot = join(import.meta.dirname, "..");
@@ -252,6 +252,33 @@ describe("recover CLI", () => {
     const res = await recover("http://127.0.0.1:1", "unreachable.json");
     expect(res.code).toBe(20);
     expect(existsSync(join(dir, "unreachable.json"))).toBe(false);
+  }, 30_000);
+
+  it("--from-export recovers from a file with the network API unreachable", async () => {
+    const file = join(dir, "export.ndjson");
+    const lines = [await projectAggregate(), await deploymentPost()].map((m) => exportLine(m));
+    writeFileSync(file, lines.map((l) => `${l}\n`).join(""));
+    const res = await recover("http://127.0.0.1:1", "from-export.json", [
+      "--from-export", file, "--verbose",
+    ]);
+    expect(res.code).toBe(0);
+    expect(res.stderr.split("\n")[0]).toBe(
+      `[recover] Reading messages from the export at ${file} (channel ${CHANNEL})`,
+    );
+    const out = readOutput("from-export.json");
+    expect(out.complete).toBe(true);
+    expect(out.alephApiUrl).toBe("http://127.0.0.1:1");
+    expect(out.projects.map((p) => p.id)).toEqual(["p1"]);
+    expect(out.projects[0]?.deployments[0]?.storeStatus).toBe("absent");
+  }, 30_000);
+
+  it("--from-export on a missing path exits 21 and writes nothing", async () => {
+    const res = await recover("http://127.0.0.1:1", "no-export.json", [
+      "--from-export", join(dir, "nope.ndjson"),
+    ]);
+    expect(res.code).toBe(21);
+    expect(res.stderr).toContain("error: cannot read the export at ");
+    expect(existsSync(join(dir, "no-export.json"))).toBe(false);
   }, 30_000);
 
   it("a key that does not derive --address exits 12", async () => {

@@ -11,6 +11,15 @@ export interface TrustResult {
 
 type Bound = AlephMessage["content"];
 
+/** The four fields Aleph signs, plus the signature over them. */
+export interface SignedFields {
+  chain: string;
+  sender: string;
+  type: string;
+  item_hash: string;
+  signature: string;
+}
+
 function untrusted(hash: string, reason: string): RecoveryWarning {
   return { code: "UNTRUSTED_MESSAGE", detail: `${hash}: ${reason}`, messageHash: hash };
 }
@@ -19,7 +28,10 @@ function untrusted(hash: string, reason: string): RecoveryWarning {
  * Ported from `apps/agent/src/aleph.ts:62-80` (`boundContent`): the parsed
  * `item_content` is the only content the signature covers, via `item_hash`.
  */
-function bindContent(m: AlephMessage): { content: Bound } | { reason: string } {
+export function bindContent(m: {
+  item_content?: string | undefined;
+  item_hash: string;
+}): { content: Bound } | { reason: string } {
   if (typeof m.item_content !== "string") return { reason: "no inline content" };
   const digest = createHash("sha256").update(m.item_content, "utf8").digest("hex");
   if (digest !== m.item_hash) return { reason: "content hash mismatch" };
@@ -35,14 +47,21 @@ function bindContent(m: AlephMessage): { content: Bound } | { reason: string } {
   return { content: parsed as Bound };
 }
 
+/** A 65-byte or 64-byte (compact) signature written as bare hex, with no `0x`. */
+const BARE_SIGNATURE = /^(?:[0-9a-fA-F]{128}|[0-9a-fA-F]{130})$/;
+
 /**
  * Ported from `apps/agent/src/crypto.ts:79-93` (`verifyAlephSignature`): the
  * signed string is `[chain, sender, type, item_hash].join("\n")`.
+ *
+ * The network accepts and lists signatures without the `0x` prefix (334 of 28,395 recent
+ * messages on api2, 2026-11-18); ethers rejects them, so the prefix is added first.
  */
-function signatureRecoversSender(m: AlephMessage): boolean {
+export function signatureRecoversSender(m: SignedFields): boolean {
   try {
     const signed = [m.chain, m.sender, m.type, m.item_hash].join("\n");
-    return verifyMessage(signed, m.signature).toLowerCase() === m.sender.toLowerCase();
+    const signature = BARE_SIGNATURE.test(m.signature) ? `0x${m.signature}` : m.signature;
+    return verifyMessage(signed, signature).toLowerCase() === m.sender.toLowerCase();
   } catch {
     return false;
   }

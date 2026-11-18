@@ -242,7 +242,11 @@ export type StoreAbsentReason =
  */
 export type StoreLookup =
   | { kind: "resolved"; itemHash: string; itemType: string }
-  | { kind: "forgotten" }
+  /**
+   * `unverified`: only an export sets it, for a FORGET whose signer it could not check, so the
+   * report must not say the bytes are gone. A CCN lookup never sets it.
+   */
+  | { kind: "forgotten"; unverified?: true }
   | { kind: "removed" }
   | { kind: "absent"; reason: StoreAbsentReason };
 
@@ -326,6 +330,29 @@ export async function fetchStoreMessage(
     };
   };
   return classifyStoreBody(body);
+}
+
+/**
+ * Where `reconstruct` resolves a deployment's STORE: the two lookups it makes,
+ * so a source other than a CCN (an export on disk) can answer them.
+ */
+export interface StoreResolver {
+  lookup(itemHash: string): Promise<StoreLookup>;
+  findProcessedByContentHash(cid: string): Promise<string | null>;
+}
+
+/** The default resolver: the CCN at `apiUrl`, through the two HTTP lookups above. */
+export function ccnStoreResolver(
+  apiUrl: string,
+  channel: string,
+  fetchImpl?: typeof fetch,
+): StoreResolver {
+  const opts = fetchImpl ? { fetchImpl } : {};
+  return {
+    lookup: (itemHash) => fetchStoreMessage(apiUrl, itemHash, opts),
+    findProcessedByContentHash: (cid) =>
+      findProcessedStoreByContentHash(apiUrl, channel, cid, opts),
+  };
 }
 
 const RAW_TIMEOUT_MS = 300_000;

@@ -1,6 +1,6 @@
 {
   "name": "@stasho-app/recovery",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Standalone Stasho recovery script. Reconstructs project + deployment history from a wallet's signed on-chain messages without depending on the backend.",

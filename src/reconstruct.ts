@@ -12,11 +12,8 @@ import type {
 import { DEFAULT_CHANNEL } from "./types.js";
 import { decryptBlobAsUser } from "./decrypt.js";
 import { groupAmendChains } from "./amend-chain.js";
-import {
-  cidFromGatewayUrl,
-  fetchStoreMessage,
-  findProcessedStoreByContentHash,
-} from "./aleph-fetch.js";
+import { ccnStoreResolver, cidFromGatewayUrl } from "./aleph-fetch.js";
+import type { StoreResolver } from "./aleph-fetch.js";
 import { selectServing } from "./serving.js";
 import {
   malformedDeploymentReason,
@@ -252,37 +249,28 @@ function replayProjects(
  * A FORGOTten STORE whose CID is in the deployment URL may still be pinned by
  * another processed STORE; when so the CID is recovered as a `content-match`.
  */
-interface CcnRef {
-  apiUrl: string;
-  channel: string;
-  fetchImpl?: typeof fetch;
-}
-
-function fetchOpts(ccn: { fetchImpl?: typeof fetch }): { fetchImpl?: typeof fetch } {
-  return ccn.fetchImpl ? { fetchImpl: ccn.fetchImpl } : {};
-}
-
 async function resolveForgotten(
   inner: DeploymentPostInner,
-  storeRef: string,
+  forgotten: { storeRef: string; unverified: boolean },
   leafHash: string,
-  ccn: CcnRef,
+  stores: StoreResolver,
   warnings: RecoveryWarning[],
 ): Promise<{
   cid: string | null;
   storeStatus: "content-match" | "forgotten";
   artifactKind: RecoveredDeployment["artifactKind"];
 }> {
+  const { storeRef, unverified } = forgotten;
+  const state = unverified
+    ? "reads forgotten per an unverified FORGET in the export"
+    : "was FORGOTten";
   const cid = cidFromGatewayUrl(inner.public.url);
-  const twin =
-    cid === null
-      ? null
-      : await findProcessedStoreByContentHash(ccn.apiUrl, ccn.channel, cid, fetchOpts(ccn));
+  const twin = cid === null ? null : await stores.findProcessedByContentHash(cid);
   if (cid !== null && twin !== null) {
     warnings.push({
       code: "STORE_CONTENT_MATCH",
       detail:
-        `Deployment ${inner.deploymentId}: STORE ${storeRef} was FORGOTten ` +
+        `Deployment ${inner.deploymentId}: STORE ${storeRef} ${state} ` +
         `but STORE ${twin} still pins ${cid}`,
       messageHash: leafHash,
     });
@@ -290,9 +278,10 @@ async function resolveForgotten(
   }
   warnings.push({
     code: "STORE_FORGOTTEN",
-    detail:
-      `Deployment ${inner.deploymentId}: STORE ${storeRef} was ` +
-      "FORGOTten on the network (bytes are gone)",
+    detail: unverified
+      ? `Deployment ${inner.deploymentId}: STORE ${storeRef} ${state} (the bytes may still exist)`
+      : `Deployment ${inner.deploymentId}: STORE ${storeRef} was ` +
+        "FORGOTten on the network (bytes are gone)",
     messageHash: leafHash,
   });
   return { cid: null, storeStatus: "forgotten", artifactKind: null };
@@ -303,7 +292,7 @@ async function buildDeployment(
   inner: DeploymentPostInner,
   decrypted: Record<string, unknown>,
   leafHash: string,
-  ccn: CcnRef,
+  stores: StoreResolver,
   warnings: RecoveryWarning[],
 ): Promise<RecoveredDeployment> {
   // Schema selection: v4 records carry `storeRef` (canonical pointer to
@@ -321,13 +310,14 @@ async function buildDeployment(
 
   if (storeRef !== null) {
     try {
-      const store = await fetchStoreMessage(ccn.apiUrl, storeRef, fetchOpts(ccn));
+      const store = await stores.lookup(storeRef);
       if (store.kind === "resolved") {
         resolvedCid = store.itemHash;
         storeStatus = "resolved";
         artifactKind = toArtifactKind(store.itemType);
       } else if (store.kind === "forgotten") {
-        const forgotten = await resolveForgotten(inner, storeRef, leafHash, ccn, warnings);
+        const marker = { storeRef, unverified: store.unverified === true };
+        const forgotten = await resolveForgotten(inner, marker, leafHash, stores, warnings);
         resolvedCid = forgotten.cid;
         storeStatus = forgotten.storeStatus;
         artifactKind = forgotten.artifactKind;
@@ -428,6 +418,9 @@ const byCreatedAtDesc = (a: RecoveredDeployment, b: RecoveredDeployment): number
  *
  * Replay logic mirrors `apps/backend/src/services/aleph-replay.ts` — any
  * divergence between this function and the backend's replay is a bug.
+ *
+ * STOREs resolve through `opts.stores` when given, else through the CCN at
+ * `apiUrl` on `channel` (with `opts.fetchImpl`).
  */
 export async function reconstruct(
   rawAggregates: AlephMessage[],
@@ -435,8 +428,9 @@ export async function reconstruct(
   userPrivKey: Buffer,
   apiUrl: string,
   channel: string = DEFAULT_CHANNEL,
-  opts: { fetchImpl?: typeof fetch } = {},
+  opts: { fetchImpl?: typeof fetch; stores?: StoreResolver } = {},
 ): Promise<ReconstructResult> {
+  const stores = opts.stores ?? ccnStoreResolver(apiUrl, channel, opts.fetchImpl);
   const warnings: RecoveryWarning[] = [];
   const counts = { malformed: 0 };
   const aggregates = keepWellFormed(rawAggregates, warnings, counts);
@@ -474,8 +468,7 @@ export async function reconstruct(
       });
       continue;
     }
-    const ccn: CcnRef = { apiUrl, channel, ...fetchOpts(opts) };
-    const dep = await buildDeployment(post, decrypted, leaf.item_hash, ccn, warnings);
+    const dep = await buildDeployment(post, decrypted, leaf.item_hash, stores, warnings);
     if (attachDeployment(dep, post, state, warnings) === "project") {
       deploymentsRecovered++;
     }
@@ -510,6 +503,7 @@ export async function reconstruct(
       malformedRecords,
       untrustedMessages: 0,
       truncatedQueries: 0,
+      exportLinesRejected: 0,
       storeFetchFailures: warnings.filter((w) => w.code === "STORE_FETCH_FAILED").length,
       deletedProjects: deletedProjects.length,
       warnings: warnings.length,

@@ -12,6 +12,8 @@ export interface OrchestrateResult {
   untrustedMessages: number;
   otherWalletMessages: number;
   truncatedQueries: number;
+  /** The wallet and every sender it ever authorized, lowercased: whose records it trusts. */
+  trustedSenders: ReadonlySet<string>;
 }
 
 /**
@@ -136,15 +138,15 @@ export async function orchestrate(
   // Extract ever-authorized union from Query A's security AGGREGATEs.
   const authorized = extractAuthorizedSenders(aggA, walletAddress);
   authorized.delete(walletLc); // wallet is Query A's job
+  const trustedSenders = new Set([...authorized, walletLc]);
 
   // Query B: messages signed by anyone else the user has ever authorized.
   let aggB: AlephMessage[] = [];
   let postB: AlephMessage[] = [];
   if (authorized.size > 0) {
     const addrs = [...authorized];
-    const allowedB = new Set([...authorized, walletLc]);
-    aggB = trust(await fetchMessages("AGGREGATE", addrs), allowedB);
-    postB = trust(await fetchMessages("POST", addrs), allowedB);
+    aggB = trust(await fetchMessages("AGGREGATE", addrs), trustedSenders);
+    postB = trust(await fetchMessages("POST", addrs), trustedSenders);
   }
 
   // Merge + dedup by item_hash.
@@ -180,5 +182,6 @@ export async function orchestrate(
     untrustedMessages: distinctWarnings.length,
     otherWalletMessages,
     truncatedQueries: truncationWarnings.length,
+    trustedSenders,
   };
 }

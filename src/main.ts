@@ -12,6 +12,7 @@ interface CliArgs {
   alephApi: string;
   verbose: boolean;
   stdin: boolean;
+  fromExport?: string;
 }
 
 const DEFAULTS = {
@@ -28,12 +29,49 @@ const EXIT = {
   ADDRESS_MISMATCH: 12,
   INCOMPLETE: 3,
   ALEPH_API_UNREACHABLE: 20,
+  EXPORT_UNREADABLE: 21,
   BUNDLE_HASH_MISMATCH: 30,
   ENCRYPTION_KEY_MISMATCH: 31,
   BUNDLE_INPUT_INVALID: 32,
   BUNDLE_UNDECRYPTABLE: 33,
   UNEXPECTED: 99,
 } as const;
+
+type ValueFlag = "address" | "output" | "channel" | "alephApi" | "fromExport";
+
+const VALUE_FLAGS: Readonly<Record<string, ValueFlag>> = {
+  "--address": "address",
+  "--output": "output",
+  "--channel": "channel",
+  "--aleph-api": "alephApi",
+  "--from-export": "fromExport",
+};
+
+/** The value a flag takes when it is the last argument. */
+const MISSING_VALUE: Readonly<Record<ValueFlag, string>> = {
+  address: "",
+  output: "",
+  channel: DEFAULTS.channel,
+  alephApi: DEFAULTS.alephApi,
+  fromExport: "",
+};
+
+/** Applies the flag at `argv[i]`; returns the index of the last argument it consumed. */
+function applyFlag(args: CliArgs, argv: string[], i: number): number {
+  const a = argv[i] ?? "";
+  const flag = VALUE_FLAGS[a];
+  if (flag !== undefined) {
+    args[flag] = argv[i + 1] ?? MISSING_VALUE[flag];
+    return i + 1;
+  }
+  if (a === "--verbose") args.verbose = true;
+  else if (a === "--stdin") args.stdin = true;
+  else if (a === "--help" || a === "-h") {
+    printUsage();
+    process.exit(EXIT.OK);
+  }
+  return i;
+}
 
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
@@ -44,21 +82,8 @@ function parseArgs(argv: string[]): CliArgs {
     verbose: false,
     stdin: false,
   };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--address") args.address = argv[++i] ?? "";
-    else if (a === "--output") args.output = argv[++i] ?? "";
-    else if (a === "--channel") args.channel = argv[++i] ?? DEFAULTS.channel;
-    else if (a === "--aleph-api")
-      args.alephApi = argv[++i] ?? DEFAULTS.alephApi;
-    else if (a === "--verbose") args.verbose = true;
-    else if (a === "--stdin") args.stdin = true;
-    else if (a === "--help" || a === "-h") {
-      printUsage();
-      process.exit(EXIT.OK);
-    }
-  }
-  if (!args.address || !args.output) {
+  for (let i = 0; i < argv.length; i++) i = applyFlag(args, argv, i);
+  if (!args.address || !args.output || args.fromExport === "") {
     printUsage();
     process.exit(EXIT.MISSING_REQUIRED_ARG);
   }
@@ -81,6 +106,7 @@ Required:
 Options:
   --channel NAME   Storage channel (default: ${DEFAULTS.channel})
   --aleph-api URL  Network HTTP API URL (default: ${DEFAULTS.alephApi})
+  --from-export PATH  Read messages from an export file or directory instead of the network API
   --verbose        Print progress to stderr
   --stdin          Read USER_PRIVATE_KEY from stdin instead of env
   --help, -h       Print this help
@@ -103,6 +129,7 @@ Exit codes:
   11  Private key is not 32 bytes of hex
   12  Derived address does not match --address
   20  Network API unreachable
+  21  The export file or directory cannot be read
   30  bundle: fetched bytes do not match the recorded bundleHash
   31  bundle: this key does not derive the recovery file's encryption key
   32  bundle: deployment not found, no bundleHash or cid, or not a recovery file

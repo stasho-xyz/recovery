@@ -172,6 +172,8 @@ export interface RecoveryStats {
   malformedRecords: number;
   untrustedMessages: number;
   truncatedQueries: number;
+  /** Lines of a `--from-export` export that failed a check and were dropped; 0 on the live path. */
+  exportLinesRejected: number;
   storeFetchFailures: number;
   deletedProjects: number;
   warnings: number;

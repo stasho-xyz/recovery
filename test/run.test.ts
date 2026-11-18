@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { summarize } from "../src/run.js";
 import type { RecoveryOutput } from "../src/types.js";
 
-function output(complete: boolean): RecoveryOutput {
+function output(complete: boolean, exportLinesRejected = 0): RecoveryOutput {
   return {
     complete,
     projects: [{}, {}],
@@ -15,6 +15,7 @@ function output(complete: boolean): RecoveryOutput {
       untrustedMessages: 3,
       truncatedQueries: 4,
       storeFetchFailures: 5,
+      exportLinesRejected,
     },
   } as unknown as RecoveryOutput;
 }
@@ -32,5 +33,12 @@ describe("summarize", () => {
       "[recover] INCOMPLETE: 1 decrypt failures, 2 malformed records, 3 untrusted messages, " +
         "4 truncated queries, 5 store fetch failures (exit 3)",
     ]);
+  });
+
+  it("lists rejected export lines only when there are some", () => {
+    expect(summarize(output(false, 6), "out.json")[1]).toBe(
+      "[recover] INCOMPLETE: 1 decrypt failures, 2 malformed records, 3 untrusted messages, " +
+        "4 truncated queries, 5 store fetch failures, 6 rejected export lines (exit 3)",
+    );
   });
 });

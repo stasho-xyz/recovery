@@ -37,7 +37,26 @@ op read "op://Private/My wallet/private key" \
   | npm run recover -- --stdin --address 0xYOUR_WALLET_ADDRESS --output ./my-recovery.json
 ```
 
-Options: `--channel`, `--aleph-api`, `--verbose`, `--stdin`, `--help`.
+Options: `--channel`, `--aleph-api`, `--from-export`, `--verbose`, `--stdin`, `--help`.
+
+`--from-export PATH` reads the messages from an export instead of the network: a file or directory
+of the same signed messages, one per line, as Stasho's nightly export writes them. A directory is
+read file by file in name order, every `*.ndjson` directly inside it. The run makes no network
+request.
+
+- Lines on `--channel`, and STORE and FORGET lines on any channel, are checked against their hash
+  and signature before use. Other lines are only parsed, to read their channel.
+- A line that fails a check is left out with an `EXPORT_LINE_REJECTED` warning and makes the run
+  incomplete (exit `3`). A line the script cannot check (not inline, or not signed on ETH) is left
+  out with an `EXPORT_LINE_SKIPPED` warning and does not.
+- A FORGET counts against a STORE the export holds only when its signer is the STORE's sender, its
+  owner or a sender the wallet authorized (`STORE_FORGET_IGNORED` otherwise). When the export does
+  not hold the STORE, the signer cannot be checked: `STORE_FORGET_UNVERIFIED`.
+- Every run warns `EXPORT_COMPLETENESS_UNPROVEN`: signatures prove each record is genuine, not that
+  the export holds every record.
+- An export cannot show that the network's garbage collection removed a STORE, so a deployment
+  whose bytes were collected still reads `resolved`.
+- `alephApiUrl` in the file is still `--aleph-api`, where the `bundle` command fetches the bytes.
 
 ## The `bundle` command
 
@@ -63,6 +82,7 @@ the deployment's `bundleHash`, and that the envelope decrypts, then writes the d
 | `11` | The key is not 32 bytes of hex |
 | `12` | The key derives to a different address than `--address` |
 | `20` | The network API is unreachable |
+| `21` | The export given to `--from-export` cannot be read (missing, a directory with no `*.ndjson`, a read error), or holds no verified message on `--channel` |
 | `30` | `bundle`: the bytes do not match the recorded `bundleHash` |
 | `31` | `bundle`: the key does not derive the recovery file's encryption key |
 | `32` | `bundle`: the deployment is not in the file, has no `bundleHash` or `cid`, or the file is not a recovery file |

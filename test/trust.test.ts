@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { filterTrusted } from "../src/trust.js";
+import { Signature } from "ethers";
+import { filterTrusted, signatureRecoversSender } from "../src/trust.js";
+import { PREFIXLESS_MESSAGES, flipped } from "./helpers/prefixless-messages.js";
 import { DELEGATE, WALLET, signedMessage } from "./helpers/signed-message.js";
 import type { AlephMessage } from "../src/types.js";
 
@@ -105,5 +107,29 @@ describe("filterTrusted", () => {
       },
     ]);
     expect(result.otherWalletMessages).toBe(0);
+  });
+});
+
+describe("signatures without the 0x prefix", () => {
+  it("two real messages api2 lists verify, and fail with one hex digit changed", () => {
+    for (const m of PREFIXLESS_MESSAGES) {
+      expect(m.signature.startsWith("0x")).toBe(false);
+      expect(signatureRecoversSender(m)).toBe(true);
+      expect(signatureRecoversSender({ ...m, signature: flipped(m.signature) })).toBe(false);
+    }
+  });
+
+  it("the live trust filter keeps a message signed as bare hex, 65 or 64 bytes", async () => {
+    const msg = await make();
+    const bare = msg.signature.slice(2);
+    const compact = Signature.from(msg.signature).compactSerialized.slice(2);
+    expect([bare.length, compact.length]).toEqual([130, 128]);
+    for (const signature of [bare, compact]) {
+      const { trusted, warnings } = filterTrusted([{ ...msg, signature }], WALLET.address);
+      expect(warnings).toEqual([]);
+      expect(trusted).toHaveLength(1);
+    }
+    const { trusted } = filterTrusted([{ ...msg, signature: flipped(bare) }], WALLET.address);
+    expect(trusted).toEqual([]);
   });
 });
